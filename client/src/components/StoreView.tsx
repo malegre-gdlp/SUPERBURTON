@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useGame } from '../engine/GameContext'
 import { storeApi, catalogApi, economyApi, authApi, gameApi } from '../api'
@@ -19,8 +19,29 @@ export default function StoreView() {
   const [tr, setTr] = useState<any>(null)
   const [day, setDay] = useState(1)
   const [cust, setCust] = useState<any[]>([])
+  const tickRef = useRef(false)
 
   useEffect(() => { loadStore(); loadCat(); loadDay() }, [id])
+
+  /* Auto-tick every 30s when store is open */
+  useEffect(() => {
+    if (!s?.isOpen) return
+    const iv = setInterval(async () => {
+      if (tickRef.current || !s?.isOpen) return
+      tickRef.current = true
+      try {
+        const { data } = await economyApi.tickStore(s._id)
+        if (data?.result) {
+          setTr(data.result)
+          setCust(Array.from({length:Math.min(data.result.customers||0,15)}, (_,i) => ({id:i,x:Math.random()*80+10,y:Math.random()*70+15})))
+          setTimeout(() => setCust([]), 4000)
+        }
+        loadStore(); loadUser(); loadDay()
+      } catch { /* silent auto-tick */ }
+      finally { tickRef.current = false }
+    }, 30000)
+    return () => clearInterval(iv)
+  }, [s?.isOpen, s?._id])
 
   const loadStore = async () => {
     try { const { data } = await storeApi.getById(id!); setS(data.store) } catch { nav('/dashboard') }
