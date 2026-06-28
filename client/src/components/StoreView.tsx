@@ -15,6 +15,7 @@ const catIcons: Record<string,string> = {
   electronica:'💻', jardineria:'🌿', farmacia:'💊', moda:'👕', juguetes:'🎮'
 }
 const roleSalaries: Record<string,number> = { cashier:800, stockist:900, manager:1200, cleaner:700, security:1000 }
+const roleDesc: Record<string,string> = { cashier:'Cobra en caja', stockist:'Repone estanterías', manager:'Gestiona la tienda', cleaner:'Limpia', security:'Vigila' }
 const districtEmojis: Record<string,string> = { barrio:'🏘️', ciudad:'🏙️', centro_comercial:'🏬', zona_exclusiva:'🌴' }
 
 export default function StoreView() {
@@ -374,9 +375,7 @@ export default function StoreView() {
               <div className="hire-info">
                 <span className="hire-role">{role}</span>
                 <span className="hire-salary">💰 {salary}€/día</span>
-                <span className="hire-desc">
-                  {role==='cashier'?'Cobra en caja':role==='stockist'?'Repone estanterías':role==='manager'?'Gestiona la tienda':role==='cleaner'?'Limpia':role==='security'?'Vigila'}
-                </span>
+                <span className="hire-desc">{roleDesc[role]||''}</span>
               </div>
               <span className="hire-btn">Contratar →</span>
             </div>
