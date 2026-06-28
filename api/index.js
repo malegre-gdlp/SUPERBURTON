@@ -2,16 +2,16 @@ const express = require('express');
 const cors = require('cors');
 const mongoose = require('mongoose');
 
-// Fail fast if DB not reachable — no 10s buffer timeout
-mongoose.set('bufferTimeoutMS', 1000);
+// Allow time for replica set discovery (3 hosts)
+mongoose.set('bufferTimeoutMS', 20000);
 
 // Database connection
 let dbPromise = null;
 let dbReady = false;
 let dbError = null;
 const MONGO_URI = process.env.MONGODB_URI ||
-  'mongodb://junta_db_user:1gQKARcW4PYdbpnO@ac-pysrurk-shard-00-00.yg22wfb.mongodb.net:27017/supermarket-simulator?ssl=true&authSource=admin&directConnection=true&serverSelectionTimeoutMS=5000';
-  // directConnection=true avoids replica set discovery issues (SRV DNS failures on Vercel)
+  'mongodb://junta_db_user:1gQKARcW4PYdbpnO@ac-pysrurk-shard-00-00.yg22wfb.mongodb.net:27017,ac-pysrurk-shard-00-01.yg22wfb.mongodb.net:27017,ac-pysrurk-shard-00-02.yg22wfb.mongodb.net:27017/supermarket-simulator?ssl=true&replicaSet=atlas-l3f86z-shard-0&authSource=admin&retryWrites=true&w=majority&serverSelectionTimeoutMS=15000';
+  // 3 hosts + replicaSet name lets Mongoose discover the primary — avoids "not primary" errors
 
 async function connectToDatabase() {
   if (dbReady) return;
