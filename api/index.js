@@ -10,7 +10,8 @@ let dbPromise = null;
 let dbReady = false;
 let dbError = null;
 const MONGO_URI = process.env.MONGODB_URI ||
-  'mongodb://junta_db_user:1gQKARcW4PYdbpnO@ac-pysrurk-shard-00-00.yg22wfb.mongodb.net:27017,ac-pysrurk-shard-00-01.yg22wfb.mongodb.net:27017,ac-pysrurk-shard-00-02.yg22wfb.mongodb.net:27017/supermarket-simulator?ssl=true&authSource=admin&retryWrites=true&w=majority';
+  'mongodb://junta_db_user:1gQKARcW4PYdbpnO@ac-pysrurk-shard-00-00.yg22wfb.mongodb.net:27017/supermarket-simulator?ssl=true&authSource=admin&directConnection=true&serverSelectionTimeoutMS=5000';
+  // directConnection=true avoids replica set discovery issues (SRV DNS failures on Vercel)
 
 async function connectToDatabase() {
   if (dbReady) return;
