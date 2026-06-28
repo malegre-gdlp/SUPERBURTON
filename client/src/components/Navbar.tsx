@@ -27,8 +27,8 @@ export default function Navbar() {
           {state.user ? (
             <>
               <Link to="/dashboard" className="nav-link">Mi Tienda</Link>
-              <Link to="/white-label" className="nav-link">Marca Blanca</Link>
-              <Link to="/franchises" className="nav-link">Franquicias</Link>
+              {state.user.level >= 5 && <Link to="/white-label" className="nav-link">🏷️ Marca Blanca</Link>}
+              {state.user.level >= 10 && <Link to="/franchises" className="nav-link">🏢 Franquicias</Link>}
               <div className="nav-user">
                 <div className="nav-user-info">
                   <span className="nav-level">Nv.{state.user.level}</span>

@@ -27,8 +27,11 @@ router.post('/request', auth, async (req, res) => {
     const brandStore = await Store.findById(brandStoreId);
     if (!brandStore) return res.status(404).json({ error: 'Store not found' });
 
-    if (req.user.level < 15) {
-      return res.status(403).json({ error: 'Level 15 required for franchises' });
+    // Check store level
+    const myStore = await Store.findOne({ owner: req.user._id }).sort({ level: -1 });
+    const storeLevel = myStore ? myStore.level : req.user.level;
+    if (storeLevel < 10) {
+      return res.status(403).json({ error: `Nivel 10 de tienda requerido para franquicias (actual: ${storeLevel})` });
     }
 
     // Create franchise store with same name

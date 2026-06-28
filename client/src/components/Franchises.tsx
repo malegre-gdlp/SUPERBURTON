@@ -136,20 +136,20 @@ export default function Franchises() {
           </div>
         </div>
 
-        {state.user && state.user.level < 15 && (
+        {state.user && state.user.level < 10 && (
           <div className="level-requirement card">
-            <span className="req-icon">🔒</span>
+            <span className="lock-icon">🔒</span>
             <div>
-              <h3>Requiere nivel 15</h3>
-              <p>Las franquicias se desbloquean al alcanzar el nivel 15. Tu nivel actual: {state.user.level}</p>
+              <h3>Franquicias bloqueadas</h3>
+              <p>Alcanza el nivel 10 de tienda para abrir franquicias. Nivel actual: {state.user.level}</p>
               <div className="level-bar">
-                <div className="level-fill-bar" style={{ width: `${Math.min(100, (state.user.level / 15) * 100)}%` }} />
+                <div className="level-fill-bar" style={{ width: `${Math.min(100, (state.user.level / 10) * 100)}%` }} />
               </div>
             </div>
           </div>
         )}
 
-        {state.stores.length > 0 && state.user && state.user.level >= 15 && (
+        {state.stores.length > 0 && state.user && state.user.level >= 10 && (
           <div className="card franchise-action">
             <h3>🏪 Tus tiendas como franquiciables</h3>
             <p>Tus tiendas pueden convertirse en marcas franquiciables. Configúralo desde la gestión de cada tienda.</p>

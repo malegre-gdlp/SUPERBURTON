@@ -78,9 +78,14 @@ router.post('/white-label', auth, async (req, res) => {
   try {
     const { name, description, category, brandName, logoUrl, imageUrl } = req.body;
 
-    if (req.user.level < 10) {
+    // Check store level instead of player level
+    const Store = require('../models/Store');
+    const store = await Store.findOne({ owner: req.user._id }).sort({ level: -1 });
+    const storeLevel = store ? store.level : req.user.level;
+    
+    if (storeLevel < 5) {
       return res.status(403).json({
-        error: 'You need to reach level 10 to create white label products'
+        error: `Necesitas nivel 5 de tienda para crear marca blanca (nivel actual: ${storeLevel})`
       });
     }
 

@@ -78,7 +78,7 @@ export default function WhiteLabel() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (state.user && state.user.level < 10) {
+    if (state.user && state.user.level < 5) {
       notify('warning', 'Necesitas nivel 10 para crear marca blanca')
       return
     }
@@ -133,18 +133,18 @@ export default function WhiteLabel() {
           <button
             className="btn btn-primary btn-lg"
             onClick={() => setShowCreate(true)}
-            disabled={state.user ? state.user.level < 10 : false}
+            disabled={state.user ? state.user.level < 5 : false}
           >
             + Nuevo Producto
           </button>
         </div>
 
-        {state.user && state.user.level < 10 && (
+        {state.user && state.user.level < 5 && (
           <div className="level-lock card">
             <span className="lock-icon">🔒</span>
             <div>
               <h3>Desbloquea la Marca Blanca</h3>
-              <p>Alcanza el nivel 10 para crear tus propios productos. Actual: Nivel {state.user.level}</p>
+              <p>Alcanza el nivel 5 de tienda para crear tus propios productos. Actual: Nivel {state.user.level}</p>
               <div className="level-progress">
                 <div
                   className="level-fill"
