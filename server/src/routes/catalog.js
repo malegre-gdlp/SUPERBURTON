@@ -93,8 +93,8 @@ router.post('/white-label', auth, async (req, res) => {
       name,
       description,
       category,
-      basePrice: 0,
-      wholesalePrice: 0,
+      basePrice: 0.01,
+      wholesalePrice: 0.01,
       isWhiteLabel: true,
       whiteLabelDesign: {
         ownerId: req.user._id,
