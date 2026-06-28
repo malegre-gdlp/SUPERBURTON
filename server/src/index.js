@@ -86,7 +86,7 @@ io.on('connection', (socket) => {
 const PORT = process.env.PORT || 3001;
 
 if (process.env.NODE_ENV !== 'test') {
-  mongoose.connect(process.env.MONGODB_URI)
+  mongoose.connect(process.env.MONGODB_URI, { serverSelectionTimeoutMS: 10000 })
     .then(() => {
       console.log('Connected to MongoDB');
       server.listen(PORT, () => {
