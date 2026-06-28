@@ -21,7 +21,20 @@ router.post('/', auth, async (req, res) => {
       description,
       districtType: districtType || 'barrio',
       districtName: districtName || Store.DISTRICT_PROFILES[districtType || 'barrio'].name,
-      owner: req.user._id
+      owner: req.user._id,
+      // Default shelves for a new store
+      shelves: [
+        { position: { x: 0, y: 0 }, type: 'standard', category: 'alimentacion' },
+        { position: { x: 2, y: 0 }, type: 'standard', category: 'bebidas' },
+        { position: { x: 4, y: 0 }, type: 'standard', category: 'limpieza' },
+        { position: { x: 6, y: 0 }, type: 'standard', category: 'farmacia' },
+        { position: { x: 8, y: 0 }, type: 'standard', category: 'mascotas' },
+        { position: { x: 0, y: 2 }, type: 'standard', category: 'electronica' },
+        { position: { x: 2, y: 2 }, type: 'standard', category: 'moda' },
+        { position: { x: 4, y: 2 }, type: 'standard', category: 'juguetes' },
+        { position: { x: 6, y: 2 }, type: 'standard', category: 'jardineria' },
+        { position: { x: 8, y: 2 }, type: 'checkout', category: 'alimentacion' }
+      ]
     });
     await store.save();
 

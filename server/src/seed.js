@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 const Product = require('./models/Product');
-require('dotenv').config();
+require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
 
 const products = [
   // 🍎 ALIMENTACIÓN
@@ -130,7 +130,9 @@ const brands = ['MarcaPremium', 'EcoSelect', 'QualityFirst', 'BestChoice', 'Fres
 
 async function seed() {
   try {
-    await mongoose.connect(process.env.MONGODB_URI);
+    // Direct connection to Atlas primary for seeding
+    const uri = 'mongodb://junta_db_user:1gQKARcW4PYdbpnO@ac-pysrurk-shard-00-01.yg22wfb.mongodb.net:27017/supermarket-simulator?ssl=true&authSource=admin&directConnection=true&serverSelectionTimeoutMS=10000';
+    await mongoose.connect(uri);
     console.log('Connected to MongoDB');
 
     // Clear existing products
