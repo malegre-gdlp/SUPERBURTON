@@ -14,6 +14,8 @@ export default function StoreView() {
   const [catalog, setCatalog] = useState<Product[]>([])
   const [activeTab, setActiveTab] = useState<'overview' | 'shelves' | 'products' | 'employees' | 'warehouse'>('overview')
   const [tickResult, setTickResult] = useState<any>(null)
+  const [activityLog, setActivityLog] = useState<any[]>([])
+  const [autoTickOn, setAutoTickOn] = useState(false)
 
   useEffect(() => {
     if (id) loadStore()
@@ -22,6 +24,29 @@ export default function StoreView() {
   useEffect(() => {
     loadCatalog()
   }, [])
+
+  // Auto-tick: every 10s when store is open
+  useEffect(() => {
+    if (!store || !store.isOpen) {
+      setAutoTickOn(false)
+      return
+    }
+    setAutoTickOn(true)
+    const interval = setInterval(() => {
+      handleAutoTick()
+    }, 10000)
+    return () => clearInterval(interval)
+  }, [store?.isOpen, store?._id])
+
+  const handleAutoTick = async () => {
+    if (!store || !store.isOpen) return
+    try {
+      const { data } = await economyApi.tickStore(store._id)
+      setTickResult(data.result)
+      setActivityLog(prev => [{ ...data.result, time: new Date() }, ...prev].slice(0, 50))
+      loadStore()
+    } catch { /* silent */ }
+  }
 
   const loadStore = async () => {
     try {
@@ -45,7 +70,8 @@ export default function StoreView() {
     try {
       const { data } = await economyApi.tickStore(store._id)
       setTickResult(data.result)
-      notify('success', `🛒 ${data.result.customers} clientes atendidos`)
+      setActivityLog(prev => [{ ...data.result, time: new Date() }, ...prev].slice(0, 50))
+      notify('success', `🛒 ${data.result.customers} clientes | 💰 ${data.result.totalRevenue.toFixed(2)}€`)
       loadStore()
     } catch (err: any) {
       notify('error', 'Error al simular')
@@ -101,11 +127,14 @@ export default function StoreView() {
             </div>
           </div>
           <div className="store-header-actions">
+            <span className={`badge ${autoTickOn ? 'badge-success' : 'badge-warning'}`}>
+              {autoTickOn ? '🟢 Clientes cada 10s' : '🔴 Auto apagado'}
+            </span>
             <button className="btn btn-secondary" onClick={handleRestock}>
-              📦 Restock almacén
+              📦 Restock
             </button>
             <button className="btn btn-secondary" onClick={handleTick}>
-              🛒 Simular clientes
+              🛒 Tick now
             </button>
           </div>
         </div>
@@ -206,19 +235,29 @@ export default function StoreView() {
                         <span className="tick-label">Rechazos</span>
                         <span className="tick-value">{tickResult.rejectedPurchases?.length || 0}</span>
                       </div>
-                    </div>
-                    {tickResult.rejectedPurchases?.length > 0 && (
-                      <div className="rejected-list">
-                        <h5>⚠️ Compras rechazadas (precio excesivo)</h5>
-                        {tickResult.rejectedPurchases.map((r: any, i: number) => (
-                          <div key={i} className="rejected-item">
-                            <span>{r.productName}</span>
-                            <span>{r.price.toFixed(2)}€</span>
-                            <span className="rejected-reason">{r.reason}</span>
-                          </div>
-                        ))}
+                      <div className="tick-item">
+                        <span className="tick-label">Restock</span>
+                        <span className="tick-value">{tickResult.restocked || 0} uds</span>
                       </div>
-                    )}
+                    </div>
+                  </div>
+                )}
+                {activityLog.length > 0 && (
+                  <div className="activity-feed">
+                    <h4>📊 Actividad reciente</h4>
+                    <div className="activity-list">
+                      {activityLog.slice(0, 10).map((a, i) => (
+                        <div key={i} className="activity-item">
+                          <span className="activity-time">
+                            {new Date(a.time).toLocaleTimeString()}
+                          </span>
+                          <span className="activity-customers">👥 {a.customers}</span>
+                          <span className="activity-sales">🛒 {a.totalSales}uds</span>
+                          <span className="activity-revenue">💰 {a.totalRevenue.toFixed(2)}€</span>
+                          <span className="activity-profit">📈 {a.totalProfit.toFixed(2)}€</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>

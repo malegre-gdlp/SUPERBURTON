@@ -169,6 +169,47 @@
   margin-bottom: 8px;
 }
 
+/* Activity Feed */
+.activity-feed {
+  margin-top: 16px;
+}
+
+.activity-feed h4 {
+  font-size: 14px;
+  margin-bottom: 8px;
+  color: var(--color-text-secondary);
+}
+
+.activity-list {
+  max-height: 300px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.activity-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 10px;
+  background: var(--color-bg);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  animation: slideIn 0.3s ease;
+}
+
+.activity-time {
+  color: var(--color-text-secondary);
+  font-size: 11px;
+  min-width: 60px;
+}
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 .shelf-type {
   font-weight: 700;
   text-transform: capitalize;
