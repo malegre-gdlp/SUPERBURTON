@@ -2,24 +2,27 @@ const express = require('express');
 const cors = require('cors');
 const mongoose = require('mongoose');
 
-// Don't buffer queries if DB is not connected
-mongoose.set('bufferCommands', false);
-
 // Database connection promise (cached for warm starts)
 let dbPromise = null;
+let dbReady = false;
 const MONGO_URI = process.env.MONGODB_URI ||
   'mongodb+srv://junta_db_user:1gQKARcW4PYdbpnO@cluster0.yg22wfb.mongodb.net/supermarket-simulator?retryWrites=true&w=majority&appName=Cluster0';
 
 async function connectToDatabase() {
+  if (dbReady) return;
   if (dbPromise) return dbPromise;
+  
   dbPromise = mongoose.connect(MONGO_URI, {
     serverSelectionTimeoutMS: 5000,
     connectTimeoutMS: 5000
+  }).then(() => {
+    dbReady = true;
   }).catch(err => {
     console.error('MongoDB connection error:', err.message);
-    dbPromise = null; // Reset so next request retries
+    dbPromise = null;
     throw err;
   });
+  
   return dbPromise;
 }
 
