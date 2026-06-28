@@ -2,7 +2,47 @@ const express = require('express');
 const router = express.Router();
 const Store = require('../models/Store');
 const User = require('../models/User');
+const Product = require('../models/Product');
 const { auth } = require('../middleware/auth');
+
+// Auto-stock a store's shelves with products from matching categories
+async function autoStockStore(store) {
+  try {
+    const products = await Product.find({ isActive: true });
+    for (const shelf of store.shelves) {
+      if (shelf.type === 'checkout') continue;
+      const catProducts = products.filter(p => p.category === shelf.category);
+      // Pick 3-5 random products from the category
+      const picked = catProducts.sort(() => Math.random() - 0.5).slice(0, Math.min(5, catProducts.length));
+      for (const p of picked) {
+        const existing = shelf.products.find(sp => sp.productId.toString() === p._id.toString());
+        if (!existing) {
+          shelf.products.push({
+            productId: p._id,
+            quantity: Math.floor(Math.random() * 30) + 15,
+            maxCapacity: 50,
+            price: Math.round(p.basePrice * 1.3 * 100) / 100
+          });
+        }
+      }
+      // Also stock warehouse
+      for (const p of picked) {
+        const existing = store.warehouse.find(w => w.productId.toString() === p._id.toString());
+        if (!existing) {
+          store.warehouse.push({
+            productId: p._id,
+            quantity: Math.floor(Math.random() * 100) + 50,
+            minStock: 20,
+            purchasePrice: p.wholesalePrice
+          });
+        }
+      }
+    }
+    await store.save();
+  } catch (e) {
+    console.error('Auto-stock error:', e.message);
+  }
+}
 
 // Create a new store
 router.post('/', auth, async (req, res) => {
@@ -38,11 +78,17 @@ router.post('/', auth, async (req, res) => {
     });
     await store.save();
 
+    // Auto-stock shelves with products
+    await autoStockStore(store);
+
+    // Reload with stocked products
+    const stockedStore = await Store.findById(store._id);
+
     req.user.storeIds.push(store._id);
     req.user.activeStoreId = store._id;
     await req.user.save();
 
-    res.status(201).json({ store });
+    res.status(201).json({ store: stockedStore });
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
@@ -219,13 +265,6 @@ router.patch('/:id/toggle', auth, async (req, res) => {
 
     store.isOpen = !store.isOpen;
     await store.save();
-
-    // Notify via socket
-    const io = req.app.get('io');
-    io.to(`store-${store._id}`).emit('store-status-changed', {
-      storeId: store._id,
-      isOpen: store.isOpen
-    });
 
     res.json({ store });
   } catch (error) {

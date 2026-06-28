@@ -5,6 +5,42 @@ const Product = require('../models/Product');
 const Store = require('../models/Store');
 const { auth } = require('../middleware/auth');
 
+// Seed database with products if empty
+router.post('/seed', async (req, res) => {
+  try {
+    const count = await Product.countDocuments({ isActive: true });
+    if (count > 0) {
+      return res.json({ message: `${count} products already exist`, count });
+    }
+    const seedData = require('../seed-data');
+    const seeded = await Product.insertMany(
+      seedData.products.map((p, i) => ({
+        ...p,
+        brand: seedData.brands[i % seedData.brands.length],
+        isActive: true
+      }))
+    );
+    res.json({ message: `${seeded.length} products seeded`, count: seeded.length });
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// Auto-tick all open stores (called by frontend periodically)
+router.post('/auto-tick', async (req, res) => {
+  try {
+    const openStores = await Store.find({ isOpen: true }).limit(20);
+    const results = [];
+    for (const store of openStores) {
+      const result = await economyEngine.processStoreTick(store);
+      if (result) results.push({ storeId: store._id, ...result });
+    }
+    res.json({ ticks: results.length, results });
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
 // Get market overview
 router.get('/overview', async (req, res) => {
   try {
