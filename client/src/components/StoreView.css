@@ -1,0 +1,297 @@
+.store-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 20px;
+}
+
+.store-header h1 {
+  font-size: 1.6rem;
+  margin-top: 8px;
+}
+
+.store-meta {
+  display: flex;
+  gap: 16px;
+  font-size: 0.9rem;
+  color: var(--color-text-secondary);
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+/* Tabs */
+.store-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 20px;
+  background: var(--color-surface);
+  padding: 4px;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+}
+
+.tab-btn {
+  padding: 10px 18px;
+  background: transparent;
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--color-text-secondary);
+}
+.tab-btn:hover {
+  background: var(--color-surface-hover);
+}
+.tab-btn.active {
+  background: var(--color-primary);
+  color: white;
+}
+
+.store-content {
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* Stats */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.stat-box {
+  text-align: center;
+  padding: 16px 8px;
+  background: var(--color-bg);
+  border-radius: var(--radius-sm);
+}
+.stat-box span:last-child {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--color-text-light);
+  margin-top: 4px;
+}
+
+.stat-big {
+  display: block;
+  font-family: var(--font-title);
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--color-primary);
+}
+
+/* District Info */
+.district-info {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+/* Tick Result */
+.tick-result {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 2px solid var(--color-border-light);
+}
+
+.tick-result h4 {
+  margin-bottom: 12px;
+}
+
+.tick-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.tick-item {
+  text-align: center;
+  padding: 10px;
+  background: var(--color-bg);
+  border-radius: var(--radius-sm);
+}
+
+.tick-label {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--color-text-light);
+}
+
+.tick-value {
+  display: block;
+  font-family: var(--font-title);
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--color-primary);
+}
+
+.rejected-list {
+  margin-top: 12px;
+}
+
+.rejected-list h5 {
+  color: var(--color-warning);
+  margin-bottom: 8px;
+}
+
+.rejected-item {
+  display: flex;
+  gap: 12px;
+  padding: 6px 8px;
+  font-size: 0.85rem;
+  background: #fff3e0;
+  border-radius: var(--radius-sm);
+  margin-bottom: 4px;
+}
+
+.rejected-reason {
+  color: var(--color-danger);
+  font-weight: 600;
+}
+
+/* Shelves */
+.shelf-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.shelf-card {
+  padding: 12px;
+  background: var(--color-bg);
+  border-radius: var(--radius-sm);
+}
+
+.shelf-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.shelf-type {
+  font-weight: 700;
+  text-transform: capitalize;
+}
+
+.shelf-category {
+  font-size: 0.8rem;
+  color: var(--color-text-light);
+}
+
+.shelf-product-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--color-border-light);
+  font-size: 0.85rem;
+}
+
+.sp-name { flex: 1; font-weight: 600; }
+.sp-qty { color: var(--color-text-light); font-size: 0.8rem; }
+.sp-price-edit {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.sp-price-edit input {
+  width: 70px;
+  padding: 4px 6px;
+  font-size: 0.85rem;
+}
+
+/* Catalog grid */
+.catalog-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.product-card-sm {
+  padding: 12px;
+  background: var(--color-bg);
+  border-radius: var(--radius-sm);
+}
+
+.product-sm-header {
+  margin-bottom: 8px;
+}
+
+.product-sm-name {
+  display: block;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.product-sm-brand {
+  font-size: 0.8rem;
+  color: var(--color-text-light);
+}
+
+.product-sm-details {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
+  margin-bottom: 8px;
+}
+
+/* Warehouse */
+.warehouse-list {
+  margin-top: 12px;
+}
+
+.warehouse-item {
+  display: flex;
+  gap: 16px;
+  padding: 10px 12px;
+  background: var(--color-bg);
+  border-radius: var(--radius-sm);
+  margin-bottom: 6px;
+  font-size: 0.9rem;
+}
+
+.wh-name { flex: 1; font-weight: 600; }
+.wh-qty { color: var(--color-accent); font-weight: 600; }
+.wh-price { color: var(--color-text-light); }
+
+/* Employees */
+.employees-list {
+  margin-top: 12px;
+}
+
+.employee-card {
+  padding: 14px;
+  background: var(--color-bg);
+  border-radius: var(--radius-sm);
+  margin-bottom: 8px;
+}
+
+.emp-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.emp-name { font-weight: 700; }
+.emp-role {
+  font-size: 0.85rem;
+  color: var(--color-text-light);
+  text-transform: capitalize;
+}
+
+.emp-details {
+  display: flex;
+  gap: 16px;
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+}
+
+.empty-note {
+  color: var(--color-text-light);
+  font-style: italic;
+  margin-top: 12px;
+}

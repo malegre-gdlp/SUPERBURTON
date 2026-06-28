@@ -1,0 +1,183 @@
+.franchises-header {
+  margin-bottom: 24px;
+}
+
+.franchises-header h1 {
+  font-size: 1.8rem;
+}
+
+/* Steps */
+.franchise-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.step {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.step-num {
+  width: 36px;
+  height: 36px;
+  background: var(--color-primary);
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.step h4 {
+  font-size: 0.95rem;
+  margin-bottom: 2px;
+}
+
+.step p {
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+}
+
+/* Tiers */
+.tiers-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.tier-card {
+  padding: 14px;
+  border: 2px solid;
+  border-radius: var(--radius-sm);
+  background: var(--color-bg);
+}
+
+.tier-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.tier-name {
+  font-family: var(--font-title);
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.tier-min {
+  font-size: 0.85rem;
+  color: var(--color-text-light);
+}
+
+.tier-benefit {
+  font-size: 0.9rem;
+  color: var(--color-text-secondary);
+}
+
+/* Benefits */
+.benefits-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.benefit-item {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.benefit-icon {
+  font-size: 1.5rem;
+  flex-shrink: 0;
+}
+
+.benefit-item h4 {
+  font-size: 0.95rem;
+  margin-bottom: 2px;
+}
+
+.benefit-item p {
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+}
+
+/* Level Requirement */
+.level-requirement {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: linear-gradient(135deg, #e8f5e9, #c8e6c9);
+  margin-top: 24px;
+}
+
+.req-icon {
+  font-size: 2.5rem;
+}
+
+.level-requirement h3 {
+  margin-bottom: 4px;
+}
+
+.level-bar {
+  height: 8px;
+  background: rgba(0,0,0,0.1);
+  border-radius: 4px;
+  margin-top: 8px;
+  overflow: hidden;
+}
+
+.level-fill-bar {
+  height: 100%;
+  background: var(--color-primary);
+  border-radius: 4px;
+  transition: width 0.5s ease;
+}
+
+/* Franchise Action */
+.franchise-action {
+  margin-top: 24px;
+}
+
+.franchise-action h3 {
+  margin-bottom: 8px;
+}
+
+.franchise-action p {
+  color: var(--color-text-secondary);
+  margin-bottom: 16px;
+}
+
+.franchise-stores-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.fs-item {
+  display: flex;
+  gap: 16px;
+  padding: 10px 12px;
+  background: var(--color-bg);
+  border-radius: var(--radius-sm);
+  font-size: 0.9rem;
+}
+
+.fs-name {
+  flex: 1;
+  font-weight: 600;
+}
+
+.fs-district {
+  color: var(--color-text-secondary);
+}
+
+.fs-rating {
+  color: var(--color-secondary);
+  font-weight: 600;
+}

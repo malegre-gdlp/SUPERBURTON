@@ -1,0 +1,177 @@
+.market-header {
+  margin-bottom: 24px;
+}
+
+.market-header h1 {
+  font-size: 1.8rem;
+}
+
+/* Economic Indicators */
+.eco-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.eco-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  background: var(--color-bg);
+  border-radius: var(--radius-sm);
+}
+
+.eco-label {
+  display: block;
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.eco-desc {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--color-text-light);
+}
+
+.eco-value {
+  font-family: var(--font-title);
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+
+.text-danger { color: var(--color-danger); }
+.text-success { color: var(--color-success); }
+
+/* Events */
+.events-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.event-card {
+  padding: 14px;
+  background: var(--color-bg);
+  border-radius: var(--radius-sm);
+}
+
+.event-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.event-name {
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.event-effects {
+  display: flex;
+  gap: 16px;
+}
+
+.effect-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+}
+
+.effect-value {
+  font-weight: 700;
+}
+
+.effect-value.up { color: var(--color-success); }
+.effect-value.down { color: var(--color-danger); }
+
+/* District Profiles */
+.district-profiles {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.dp-item {
+  padding: 12px;
+  background: var(--color-bg);
+  border-radius: var(--radius-sm);
+}
+
+.dp-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.dp-name {
+  font-weight: 700;
+}
+
+.dp-spending {
+  font-size: 0.85rem;
+  color: var(--color-secondary);
+  font-weight: 600;
+}
+
+.dp-desc {
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+  margin-bottom: 6px;
+}
+
+.dp-stats {
+  display: flex;
+  gap: 16px;
+  font-size: 0.8rem;
+  color: var(--color-text-light);
+}
+
+/* Pricing Rules */
+.pricing-rules {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.rule-item {
+  padding: 14px;
+  background: var(--color-bg);
+  border-radius: var(--radius-sm);
+}
+
+.rule-item h4 {
+  font-size: 0.95rem;
+  margin-bottom: 6px;
+}
+
+.rule-item p {
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+  margin-bottom: 8px;
+}
+
+.rule-item ul {
+  list-style: none;
+  padding: 0;
+}
+
+.rule-item ul li {
+  font-size: 0.85rem;
+  padding: 3px 0;
+  padding-left: 16px;
+  position: relative;
+}
+.rule-item ul li::before {
+  content: '•';
+  position: absolute;
+  left: 4px;
+  color: var(--color-primary);
+}
+
+.rule-item.warning ul li::before {
+  color: var(--color-warning);
+}

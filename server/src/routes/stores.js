@@ -1,0 +1,223 @@
+const express = require('express');
+const router = express.Router();
+const Store = require('../models/Store');
+const User = require('../models/User');
+const { auth } = require('../middleware/auth');
+
+// Create a new store
+router.post('/', auth, async (req, res) => {
+  try {
+    const { name, description, districtType, districtName } = req.body;
+
+    const validDistricts = Object.keys(Store.DISTRICT_PROFILES);
+    if (districtType && !validDistricts.includes(districtType)) {
+      return res.status(400).json({
+        error: `Tipo de barrio inválido. Opciones: ${validDistricts.join(', ')}`
+      });
+    }
+
+    const store = new Store({
+      name,
+      description,
+      districtType: districtType || 'barrio',
+      districtName: districtName || Store.DISTRICT_PROFILES[districtType || 'barrio'].name,
+      owner: req.user._id
+    });
+    await store.save();
+
+    req.user.storeIds.push(store._id);
+    req.user.activeStoreId = store._id;
+    await req.user.save();
+
+    res.status(201).json({ store });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// Get all stores (public)
+router.get('/', async (req, res) => {
+  try {
+    const stores = await Store.find({ isOpen: true })
+      .populate('owner', 'username level')
+      .select('-warehouse -employees')
+      .limit(50);
+    res.json({ stores });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// Get my stores
+router.get('/mine', auth, async (req, res) => {
+  try {
+    const stores = await Store.find({ owner: req.user._id });
+    res.json({ stores });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// Get single store
+router.get('/:id', async (req, res) => {
+  try {
+    const store = await Store.findById(req.params.id)
+      .populate('owner', 'username level reputation');
+    if (!store) {
+      return res.status(404).json({ error: 'Store not found' });
+    }
+    res.json({ store });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// Update store
+router.patch('/:id', auth, async (req, res) => {
+  try {
+    const store = await Store.findOne({ _id: req.params.id, owner: req.user._id });
+    if (!store) {
+      return res.status(404).json({ error: 'Store not found' });
+    }
+
+    const allowedUpdates = ['name', 'description', 'layout', 'decoration', 'isOpen', 'districtType', 'districtName'];
+    allowedUpdates.forEach(field => {
+      if (req.body[field] !== undefined) {
+        store[field] = req.body[field];
+      }
+    });
+
+    await store.save();
+    res.json({ store });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// Add shelf
+router.post('/:id/shelves', auth, async (req, res) => {
+  try {
+    const store = await Store.findOne({ _id: req.params.id, owner: req.user._id });
+    if (!store) {
+      return res.status(404).json({ error: 'Store not found' });
+    }
+
+    const { position, type, category } = req.body;
+    store.shelves.push({ position, type, category });
+    await store.save();
+
+    res.status(201).json({ shelf: store.shelves[store.shelves.length - 1] });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// Remove shelf
+router.delete('/:id/shelves/:shelfIndex', auth, async (req, res) => {
+  try {
+    const store = await Store.findOne({ _id: req.params.id, owner: req.user._id });
+    if (!store) {
+      return res.status(404).json({ error: 'Store not found' });
+    }
+
+    const index = parseInt(req.params.shelfIndex);
+    if (index >= 0 && index < store.shelves.length) {
+      store.shelves.splice(index, 1);
+      await store.save();
+    }
+
+    res.json({ store });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// Hire employee
+router.post('/:id/employees', auth, async (req, res) => {
+  try {
+    const store = await Store.findOne({ _id: req.params.id, owner: req.user._id });
+    if (!store) {
+      return res.status(404).json({ error: 'Store not found' });
+    }
+
+    const { name, role, salary } = req.body;
+    store.employees.push({ name, role, salary });
+    await store.save();
+
+    res.status(201).json({ employee: store.employees[store.employees.length - 1] });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// Fire employee
+router.delete('/:id/employees/:empIndex', auth, async (req, res) => {
+  try {
+    const store = await Store.findOne({ _id: req.params.id, owner: req.user._id });
+    if (!store) {
+      return res.status(404).json({ error: 'Store not found' });
+    }
+
+    const index = parseInt(req.params.empIndex);
+    if (index >= 0 && index < store.employees.length) {
+      store.employees.splice(index, 1);
+      await store.save();
+    }
+
+    res.json({ store });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// Add to warehouse
+router.post('/:id/warehouse', auth, async (req, res) => {
+  try {
+    const store = await Store.findOne({ _id: req.params.id, owner: req.user._id });
+    if (!store) {
+      return res.status(404).json({ error: 'Store not found' });
+    }
+
+    const { productId, quantity, purchasePrice } = req.body;
+    const existingItem = store.warehouse.find(
+      w => w.productId.toString() === productId
+    );
+
+    if (existingItem) {
+      existingItem.quantity += quantity;
+    } else {
+      store.warehouse.push({ productId, quantity, purchasePrice });
+    }
+
+    await store.save();
+    res.json({ warehouse: store.warehouse });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// Open/close store
+router.patch('/:id/toggle', auth, async (req, res) => {
+  try {
+    const store = await Store.findOne({ _id: req.params.id, owner: req.user._id });
+    if (!store) {
+      return res.status(404).json({ error: 'Store not found' });
+    }
+
+    store.isOpen = !store.isOpen;
+    await store.save();
+
+    // Notify via socket
+    const io = req.app.get('io');
+    io.to(`store-${store._id}`).emit('store-status-changed', {
+      storeId: store._id,
+      isOpen: store.isOpen
+    });
+
+    res.json({ store });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+module.exports = router;

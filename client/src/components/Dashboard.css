@@ -1,0 +1,263 @@
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.dashboard-header h1 {
+  font-size: 1.8rem;
+}
+
+.text-secondary {
+  color: var(--color-text-secondary);
+}
+
+/* Market Status */
+.market-status {
+  margin-bottom: 24px;
+}
+
+.market-status-header h3 {
+  font-size: 1rem;
+}
+
+.market-status-grid {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+
+.ms-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ms-label {
+  font-size: 0.8rem;
+  color: var(--color-text-light);
+  font-weight: 600;
+}
+
+.ms-value {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--color-primary);
+}
+
+.ms-event {
+  background: #fff3e0;
+  padding: 8px 14px;
+  border-radius: var(--radius-sm);
+}
+
+/* Empty State */
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+}
+
+.empty-icon {
+  font-size: 4rem;
+  margin-bottom: 16px;
+}
+
+.empty-state h3 {
+  font-size: 1.4rem;
+  margin-bottom: 8px;
+}
+
+.empty-state p {
+  color: var(--color-text-secondary);
+  margin-bottom: 24px;
+}
+
+/* Store Card */
+.store-card {
+  position: relative;
+}
+
+.store-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
+
+.store-card-info h3 {
+  font-size: 1.15rem;
+}
+
+.store-district {
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+}
+
+.store-card-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.store-stat {
+  text-align: center;
+  padding: 8px;
+  background: var(--color-bg);
+  border-radius: var(--radius-sm);
+}
+
+.stat-num {
+  display: block;
+  font-family: var(--font-title);
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--color-primary);
+}
+
+.stat-desc {
+  font-size: 0.75rem;
+  color: var(--color-text-light);
+}
+
+.store-card-details {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+  padding: 12px;
+  background: var(--color-bg);
+  border-radius: var(--radius-sm);
+}
+
+.detail-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+}
+
+.reputation-bar {
+  flex: 1;
+  height: 8px;
+  background: #e0e0e0;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.reputation-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.5s ease;
+}
+
+.reputation-text {
+  font-weight: 600;
+  font-size: 0.8rem;
+  min-width: 40px;
+  text-align: right;
+}
+
+.store-card-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.store-card-actions .btn {
+  flex: 1;
+}
+
+/* Modal */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  padding: 20px;
+}
+
+.modal {
+  width: 100%;
+  max-width: 500px;
+  max-height: 90vh;
+  overflow-y: auto;
+  animation: fadeIn 0.3s ease-out;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.modal-header h2 {
+  font-size: 1.3rem;
+}
+
+.form-hint {
+  font-size: 0.8rem;
+  color: var(--color-text-light);
+  margin-bottom: 8px;
+}
+
+/* District Selector */
+.district-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.district-option {
+  cursor: pointer;
+  padding: 12px;
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  transition: var(--transition);
+}
+.district-option:hover {
+  border-color: var(--color-primary-light);
+}
+.district-option.selected {
+  border-color: var(--color-primary);
+  background: #e8f5e9;
+}
+
+.district-option input {
+  display: none;
+}
+
+.district-option-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.district-option-name {
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.district-option-range {
+  font-size: 0.8rem;
+  color: var(--color-secondary);
+  font-weight: 600;
+}
+
+.district-option-desc {
+  font-size: 0.8rem;
+  color: var(--color-text-light);
+}
+
+.text-success { color: var(--color-success); font-weight: 600; }
+.text-warning { color: var(--color-warning); font-weight: 600; }
+.btn-success { background: var(--color-success); color: white; }
+.btn-success:hover { background: #388E3C; }
