@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useGame } from '../engine/GameContext'
-import { storeApi, catalogApi, economyApi } from '../api'
+import { storeApi, catalogApi, economyApi, authApi, gameApi } from '../api'
 import type { Store, Product } from '../types'
 import './StoreView.css'
 
@@ -41,9 +41,13 @@ export default function StoreView() {
   const tickRef = useRef(false)
 
   useEffect(() => { if (id) loadStore() }, [id])
-  useEffect(() => { loadCatalog() }, [])
+  useEffect(() => { loadCatalog(); fetchGameState() }, [])
 
-  /* Auto-day (25s) */
+  const fetchGameState = async () => {
+    try { const { data } = await gameApi.getState(); setDay(data.day) } catch {}
+  }
+
+  /* Auto-tick: every 25s when store is open */
   useEffect(() => {
     if (!store?.isOpen) return
     tickRef.current = false; setErrorCount(0)
@@ -52,17 +56,19 @@ export default function StoreView() {
       tickRef.current = true
       try {
         const { data } = await economyApi.tickStore(store._id)
-        setTickResult(data.result)
-        setActivity((p:any[]) => [{ ...data.result, time:Date.now() }, ...p].slice(0,30))
-        setDay(d => d+1); setErrorCount(0)
-        setCustomers(Array.from({length:Math.min(data.result.customers||0,20)}, (_,i) => ({id:i,x:Math.random()*80+10,y:Math.random()*70+15,s:0.3+Math.random()*0.7})))
-        setTimeout(() => setCustomers([]), 5000)
+        if (data.result) {
+          setTickResult(data.result)
+          setActivity((p:any[]) => [{ ...data.result, time:Date.now() }, ...p].slice(0,30))
+          setErrorCount(0)
+          setCustomers(Array.from({length:Math.min(data.result.customers||0,20)}, (_,i) => ({id:i,x:Math.random()*80+10,y:Math.random()*70+15,s:0.3+Math.random()*0.7})))
+          setTimeout(() => setCustomers([]), 5000)
+        }
         loadStore(); loadUser()
-      } catch { setErrorCount(e => e+1) }
+      } catch (e:any) { setErrorCount(c => c+1); if (errorCount > 5) notify('error','Auto-tick: '+ (e.response?.data?.error||e.message)) }
       finally { tickRef.current = false }
     }, 25000)
     return () => clearInterval(iv)
-  }, [store?.isOpen, store?._id])
+  }, [store?.isOpen, store?._id, errorCount])
 
   const loadStore = async () => {
     try { const { data } = await storeApi.getById(id!); setStore(data.store) } catch { navigate('/dashboard') }
@@ -71,10 +77,9 @@ export default function StoreView() {
     try { const { data } = await catalogApi.getAll({}); setCatalog(data.products) } catch {}
   }
   const loadUser = async () => {
-    try { const { data } = await (await import('../api')).authApi.getProfile(); 
-      dispatch({ type:'SET_USER', payload:data.user }) 
-    } catch {}
+    try { const { data } = await authApi.getProfile(); dispatch({ type:'SET_USER', payload:data.user }) } catch {}
   }
+
   const getP = (pid:string) => catalog.find(p => p._id === pid)
   const handleDrop = (targetIdx:number) => {
     if (draggingShelf !== null && draggingShelf !== targetIdx && store) {
@@ -87,10 +92,12 @@ export default function StoreView() {
     if (!store) return
     try {
       const { data } = await economyApi.tickStore(store._id)
-      setTickResult(data.result); setActivity((p:any[]) => [{ ...data.result, time:Date.now() }, ...p].slice(0,30))
-      notify('success',`🛒 ${data.result.customers} clientes | 💰 ${data.result.totalRevenue.toFixed(2)}€`)
-      setDay(d => d+1); loadStore(); loadUser()
-    } catch { notify('error','Error') }
+      if (data.result) {
+        setTickResult(data.result); setActivity((p:any[]) => [{ ...data.result, time:Date.now() }, ...p].slice(0,30))
+        notify('success',`🛒 ${data.result.customers} clientes | 💰 ${data.result.totalRevenue.toFixed(2)}€`)
+      }
+      loadStore(); loadUser(); fetchGameState()
+    } catch (e:any) { notify('error', e.response?.data?.error || 'Error en tick') }
   }
 
   const doRestock = async () => {
