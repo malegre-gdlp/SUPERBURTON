@@ -647,13 +647,21 @@ class EconomyEngine {
   }
 
   async getMarketOverview() {
+    let totalActiveStores = 0;
+    let totalProducts = 0;
+    try {
+      totalActiveStores = await Store.countDocuments({ isOpen: true });
+      totalProducts = await Product.countDocuments({ isActive: true });
+    } catch (e) {
+      console.error('Market overview count error:', e.message);
+    }
     return {
       inflationRate: Math.round(this.inflationRate * 1000) / 1000,
       globalDemand: Math.round(this.globalDemand * 100) / 100,
       seasonMultiplier: this.getCurrentSeason(),
       activeEvents: this.getActiveEvents(),
-      totalActiveStores: await Store.countDocuments({ isOpen: true }),
-      totalProducts: await Product.countDocuments({ isActive: true }),
+      totalActiveStores,
+      totalProducts,
       districtTypes: Store.DISTRICT_PROFILES
     };
   }

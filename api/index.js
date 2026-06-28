@@ -2,9 +2,13 @@ const express = require('express');
 const cors = require('cors');
 const mongoose = require('mongoose');
 
-// Database connection promise (cached for warm starts)
+// Fail fast if DB not reachable — no 10s buffer timeout
+mongoose.set('bufferTimeoutMS', 1000);
+
+// Database connection
 let dbPromise = null;
 let dbReady = false;
+let dbError = null;
 const MONGO_URI = process.env.MONGODB_URI ||
   'mongodb+srv://junta_db_user:1gQKARcW4PYdbpnO@cluster0.yg22wfb.mongodb.net/supermarket-simulator?retryWrites=true&w=majority&appName=Cluster0';
 
@@ -17,8 +21,9 @@ async function connectToDatabase() {
     connectTimeoutMS: 5000
   }).then(() => {
     dbReady = true;
+    dbError = null;
   }).catch(err => {
-    console.error('MongoDB connection error:', err.message);
+    dbError = err.message;
     dbPromise = null;
     throw err;
   });
@@ -40,15 +45,36 @@ app.use(cors({
 }));
 app.use(express.json({ limit: '10mb' }));
 
-// DB connection middleware — ensures DB ready before handling requests
+// Debug endpoint (before DB middleware) — always works
+app.get('/api/debug', (req, res) => {
+  res.json({
+    status: 'ok',
+    time: new Date().toISOString(),
+    node: process.version,
+    dbReady,
+    dbError,
+    hasDbPromise: !!dbPromise,
+    mongooseState: mongoose.connection.readyState
+  });
+});
+
+// DB connection middleware
 app.use(async (req, res, next) => {
   try {
     await connectToDatabase();
+    if (!dbReady) {
+      return res.status(503).json({
+        error: 'Conectando a la base de datos...',
+        detail: dbError || 'La conexión a MongoDB Atlas no está disponible. Ve a Network Access y añade 0.0.0.0/0'
+      });
+    }
     next();
   } catch (err) {
+    dbError = err.message;
     res.status(503).json({
-      error: 'Base de datos no disponible. Inténtalo de nuevo.',
-      detail: err.message
+      error: 'Base de datos no disponible',
+      detail: err.message,
+      fix: 'Añade 0.0.0.0/0 en MongoDB Atlas → Network Access'
     });
   }
 });
