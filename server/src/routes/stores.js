@@ -280,7 +280,7 @@ router.post('/:id/restock', auth, async (req, res) => {
   }
 });
 
-// Add to warehouse
+// Add to warehouse (buy products from wholesale market)
 router.post('/:id/warehouse', auth, async (req, res) => {
   try {
     const store = await Store.findOne({ _id: req.params.id, owner: req.user._id });
@@ -289,6 +289,13 @@ router.post('/:id/warehouse', auth, async (req, res) => {
     }
 
     const { productId, quantity, purchasePrice } = req.body;
+    const totalCost = quantity * purchasePrice;
+
+    // Check user has enough money
+    if (req.user.money < totalCost) {
+      return res.status(400).json({ error: `No tienes suficiente dinero. Necesitas ${totalCost.toFixed(2)}€, tienes ${req.user.money.toFixed(2)}€` });
+    }
+
     const existingItem = store.warehouse.find(
       w => w.productId.toString() === productId
     );
@@ -299,8 +306,13 @@ router.post('/:id/warehouse', auth, async (req, res) => {
       store.warehouse.push({ productId, quantity, purchasePrice });
     }
 
+    // Deduct money from user
+    req.user.money -= totalCost;
+
     await store.save();
-    res.json({ warehouse: store.warehouse });
+    await req.user.save();
+
+    res.json({ warehouse: store.warehouse, money: req.user.money });
   } catch (error) {
     res.status(400).json({ error: error.message });
   }

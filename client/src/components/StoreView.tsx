@@ -20,7 +20,7 @@ const districtEmojis: Record<string,string> = { barrio:'🏘️', ciudad:'🏙�
 export default function StoreView() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { state, notify } = useGame()
+  const { state, dispatch, notify } = useGame()
   const [store, setStore] = useState<Store|null>(null)
   const [catalog, setCatalog] = useState<Product[]>([])
   const [tab, setTab] = useState<'overview'|'layout'|'products'|'employees'|'warehouse'>('overview')
@@ -56,7 +56,7 @@ export default function StoreView() {
         setDay(d => d+1); setErrorCount(0)
         setCustomers(Array.from({length:Math.min(data.result.customers||0,20)}, (_,i) => ({id:i,x:Math.random()*80+10,y:Math.random()*70+15,s:0.3+Math.random()*0.7})))
         setTimeout(() => setCustomers([]), 5000)
-        loadStore()
+        loadStore(); loadUser()
       } catch { setErrorCount(e => e+1) }
       finally { tickRef.current = false }
     }, 25000)
@@ -69,6 +69,11 @@ export default function StoreView() {
   const loadCatalog = async () => {
     try { const { data } = await catalogApi.getAll({}); setCatalog(data.products) } catch {}
   }
+  const loadUser = async () => {
+    try { const { data } = await (await import('../api')).authApi.getProfile(); 
+      dispatch({ type:'SET_USER', payload:data.user }) 
+    } catch {}
+  }
   const getP = (pid:string) => catalog.find(p => p._id === pid)
 
   const doTick = async () => {
@@ -77,7 +82,7 @@ export default function StoreView() {
       const { data } = await economyApi.tickStore(store._id)
       setTickResult(data.result); setActivity((p:any[]) => [{ ...data.result, time:Date.now() }, ...p].slice(0,30))
       notify('success',`🛒 ${data.result.customers} clientes | 💰 ${data.result.totalRevenue.toFixed(2)}€`)
-      setDay(d => d+1); loadStore()
+      setDay(d => d+1); loadStore(); loadUser()
     } catch { notify('error','Error') }
   }
 
@@ -139,8 +144,8 @@ export default function StoreView() {
     const p = getP(pid); if (!p) return
     try {
       await storeApi.addToWarehouse(store._id, { productId:pid, quantity:buyQty, purchasePrice:p.wholesalePrice })
-      notify('success',`${buyQty} x ${p.name} comprados`); setShowBuy(false); loadStore()
-    } catch { notify('error','Error compra') }
+      notify('success',`${buyQty} x ${p.name} comprados`); setShowBuy(false); loadStore(); loadUser()
+    } catch (err:any) { notify('error', err.response?.data?.error || 'Error compra') }
   }
 
   if (!store) return <div className="page"><div className="container loading">🔄 Cargando tienda...</div></div>
@@ -175,6 +180,7 @@ export default function StoreView() {
               <span>⭐ {store.stats.rating.toFixed(1)}</span>
               <span>📅 Día {day}</span>
               <span>💰 {store.stats.totalRevenue.toFixed(0)}€</span>
+              <span>💵 {state.user?.money.toFixed(2)||'0'}€</span>
               <span>📦 {totalStock}uds</span>
             </div>
           </div>

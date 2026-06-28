@@ -33,7 +33,18 @@ router.post('/auto-tick', async (req, res) => {
     const results = [];
     for (const store of openStores) {
       const result = await economyEngine.processStoreTick(store);
-      if (result) results.push({ storeId: store._id, ...result });
+      if (result && result.totalProfit > 0) {
+        // Credit the store owner
+        const owner = await User.findById(store.owner);
+        if (owner) {
+          owner.money += result.totalProfit;
+          owner.stats.totalProfit += result.totalProfit;
+          owner.stats.totalSales += result.totalSales;
+          owner.stats.totalCustomers += result.customers;
+          await owner.save();
+        }
+        results.push({ storeId: store._id, ...result });
+      }
     }
     res.json({ ticks: results.length, results });
   } catch (e) {
@@ -124,6 +135,14 @@ router.post('/tick/:storeId', auth, async (req, res) => {
       return res.status(404).json({ error: 'Store not found' });
     }
     const result = await economyEngine.processStoreTick(store);
+    // Credit profit to user's money
+    if (result && result.totalProfit > 0) {
+      req.user.money += result.totalProfit;
+      req.user.stats.totalProfit += result.totalProfit;
+      req.user.stats.totalSales += result.totalSales;
+      req.user.stats.totalCustomers += result.customers;
+      await req.user.save();
+    }
     res.json({ result });
   } catch (error) {
     res.status(400).json({ error: error.message });
