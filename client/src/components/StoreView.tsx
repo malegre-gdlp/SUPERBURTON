@@ -230,34 +230,54 @@ export default function StoreView() {
         {/* ═══ PRODUCTS ═══ */}
         {tab === 'products' && <div>
           {s.shelves.map((sh, si) => sh.products.length > 0 && (
-            <div key={si} className="card" style={{marginBottom:8}}>
-              <h4 style={{color:C[sh.category],margin:'0 0 6px'}}>{I[sh.category]} {sh.category}</h4>
-              {sh.products.map((sp, pi) => {
-                const p = gp(sp.productId)
-                return <div key={pi} className="product-row" style={{display:'flex',alignItems:'center',gap:8,padding:'4px 8',background:'var(--color-bg)',borderRadius:4,marginBottom:3,fontSize:13}}>
-                  <span style={{flex:1,fontWeight:500}}>{p?.name||'?'}</span>
-                  <span style={{fontSize:12,color:'var(--color-text-secondary)'}}>{sp.quantity}/{sp.maxCapacity}</span>
-                  <div style={{display:'flex',alignItems:'center',gap:4}}>
-                    <input type="number" step="0.01" defaultValue={sp.price} style={{width:65,padding:'2px 4px',fontSize:12,border:'1px solid var(--color-border)',borderRadius:4,textAlign:'right'}}
-                      onBlur={e => { const v = parseFloat(e.target.value); if (v && v !== sp.price) updatePrice(si, pi, v) }}
-                      onKeyDown={e => { if (e.key === 'Enter') { const v = parseFloat((e.target as HTMLInputElement).value); if (v) updatePrice(si, pi, v); (e.target as HTMLInputElement).blur() } }}/>
-                    <span style={{fontSize:11}}>€</span>
+            <div key={si} className="card" style={{marginBottom:10, borderLeft:`4px solid ${C[sh.category]||'#ccc'}`}}>
+              <h4 style={{color:C[sh.category],margin:'0 0 8px',fontSize:14}}>{I[sh.category]} <b>{sh.category}</b> <span style={{fontWeight:400,fontSize:11,color:'var(--color-text-secondary)'}}>{sh.type}</span></h4>
+              <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(200px,1fr))',gap:6}}>
+                {sh.products.map((sp, pi) => {
+                  const p = gp(sp.productId)
+                  const fill = sp.maxCapacity > 0 ? Math.round(sp.quantity/sp.maxCapacity*100) : 0
+                  return <div key={pi} className="prod-card" style={{border:`1px solid ${C[sh.category]||'#eee'}22`,borderRadius:8,padding:'8px 10px',background:'var(--color-bg)'}}>
+                    <div style={{display:'flex',justifyContent:'space-between',alignItems:'start',marginBottom:4}}>
+                      <span style={{fontSize:13,fontWeight:600,flex:1}}>{p?.name||'?'}</span>
+                      <span style={{fontSize:10,color:fill>50?'#4CAF50':fill>20?'#FF9800':'#F44336',fontWeight:700,whiteSpace:'nowrap'}}>
+                        {fill>50?'●':fill>20?'⚠️':'🔴'} {sp.quantity}/{sp.maxCapacity}
+                      </span>
+                    </div>
+                    {/* Stock bar */}
+                    <div style={{background:'var(--color-border)',borderRadius:3,height:5,marginBottom:6,overflow:'hidden'}}>
+                      <div style={{height:'100%',background:C[sh.category]||'#4CAF50',borderRadius:3,width:fill+'%',transition:'width .4s'}}/>
+                    </div>
+                    <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',gap:4}}>
+                      <div style={{display:'flex',alignItems:'center',gap:4}}>
+                        <input type="number" step="0.01" defaultValue={sp.price} style={{width:60,padding:'2px 4px',fontSize:12,border:'1px solid var(--color-border)',borderRadius:4,textAlign:'right'}}
+                          onBlur={e => { const v = parseFloat(e.target.value); if (v && v !== sp.price) updatePrice(si, pi, v) }}
+                          onKeyDown={e => { if (e.key === 'Enter') { const v = parseFloat((e.target as HTMLInputElement).value); if (v) updatePrice(si, pi, v); (e.target as HTMLInputElement).blur() } }}/>
+                        <span style={{fontSize:10,color:'var(--color-text-secondary)'}}>€</span>
+                      </div>
+                    </div>
                   </div>
-                </div>
-              })}
+                })}
+              </div>
             </div>
           ))}
-          {s.shelves.every(sh => sh.products.length === 0) && <div className="card"><p style={{textAlign:'center',color:'var(--color-text-secondary)'}}>Sin productos. Pulsa Restock o el botón 🛍️ Comprar.</p></div>}
+          {s.shelves.every(sh => sh.products.length === 0) && <div className="card"><p style={{textAlign:'center',color:'var(--color-text-secondary)',padding:20}}>📭 Sin productos. Pulsa Restock o compra en el mercado.</p></div>}
 
-          {/* Buy modal inline */}
+          {/* Buy - graphical grid */}
           <div className="card" style={{marginTop:8}}>
             <h3>🛍️ Mercado Mayorista</h3>
-            <p style={{fontSize:12,color:'var(--color-text-secondary)',marginBottom:8}}>💰 Tienes {money.toFixed(2)}€ — Haz clic para comprar 10 unidades</p>
-            <div className="buy-grid">
-              {cat.filter(x => x.isActive).slice(0,40).map(p => (
-                <div key={p._id} className="buy-item" onClick={() => buy(p._id)}>
-                  <span className="buy-name">{I[p.category]} {p.name}</span>
-                  <span className="buy-price">{p.wholesalePrice.toFixed(2)}€</span>
+            <p style={{fontSize:12,color:'var(--color-text-secondary)',marginBottom:8}}>💰 <b>{money.toFixed(2)}€</b> — compra 10 uds por producto</p>
+            <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(180px,1fr))',gap:6,maxHeight:500,overflowY:'auto'}}>
+              {cat.filter(x => x.isActive).slice(0,50).map(p => (
+                <div key={p._id} className="buy-card" onClick={() => buy(p._id)}
+                  style={{border:`1px solid ${C[p.category]||'#eee'}44`,borderRadius:8,padding:'8px 10px',cursor:'pointer',background:'var(--color-bg)',transition:'all .15s'}}>
+                  <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:4}}>
+                    <span style={{fontSize:18}}>{I[p.category]}</span>
+                    <span style={{fontSize:12,fontWeight:600,flex:1}}>{p.name}</span>
+                  </div>
+                  <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                    <span style={{fontSize:13,fontWeight:700,color:C[p.category]||'var(--color-primary)'}}>{p.wholesalePrice.toFixed(2)}€</span>
+                    <span style={{fontSize:10,color:'var(--color-text-secondary)'}}>★ {p.quality||50} calidad</span>
+                  </div>
                 </div>
               ))}
             </div>

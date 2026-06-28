@@ -6,6 +6,9 @@ import './WhiteLabel.css'
 
 export default function WhiteLabel() {
   const { state, notify } = useGame()
+  const storeLevel = state.stores?.length > 0
+    ? Math.max(...state.stores.map((s:any) => s.level || 1))
+    : state.user?.level || 1
   const [myProducts, setMyProducts] = useState<Product[]>([])
   const [showCreate, setShowCreate] = useState(false)
   const [form, setForm] = useState({
@@ -78,7 +81,7 @@ export default function WhiteLabel() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (state.user && state.user.level < 5) {
+    if (storeLevel < 5) {
       notify('warning', 'Necesitas nivel 10 para crear marca blanca')
       return
     }
@@ -133,23 +136,23 @@ export default function WhiteLabel() {
           <button
             className="btn btn-primary btn-lg"
             onClick={() => setShowCreate(true)}
-            disabled={state.user ? state.user.level < 5 : false}
+            disabled={storeLevel < 5}
           >
             + Nuevo Producto
           </button>
         </div>
 
-        {state.user && state.user.level < 5 && (
+        {storeLevel < 5 && (
           <div className="level-lock card">
             <span className="lock-icon">🔒</span>
             <div>
               <h3>Desbloquea la Marca Blanca</h3>
-              <p>Alcanza el nivel 5 de tienda para crear tus propios productos. Actual: Nivel {state.user.level}</p>
+              <p>Alcanza el nivel 5 de tienda para crear tus propios productos. Actual: Nivel {storeLevel}</p>
               <div className="level-progress">
                 <div
                   className="level-fill"
                   style={{
-                    width: `${Math.min(100, (state.user.level / 10) * 100)}%`
+                    width: `${Math.min(100, (storeLevel / 5) * 100)}%`
                   }}
                 />
               </div>

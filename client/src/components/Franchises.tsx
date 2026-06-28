@@ -4,6 +4,9 @@ import './Franchises.css'
 
 export default function Franchises() {
   const { state, notify } = useGame()
+  const storeLevel = state.stores?.length > 0
+    ? Math.max(...state.stores.map((s:any) => s.level || 1))
+    : state.user?.level || 1
 
   const franchiseTiers = [
     { name: 'Bronce', minStores: 1, benefit: '5% descuento proveedores', color: '#cd7f32' },
@@ -136,20 +139,20 @@ export default function Franchises() {
           </div>
         </div>
 
-        {state.user && state.user.level < 10 && (
+        {storeLevel < 10 && (
           <div className="level-requirement card">
             <span className="lock-icon">🔒</span>
             <div>
               <h3>Franquicias bloqueadas</h3>
-              <p>Alcanza el nivel 10 de tienda para abrir franquicias. Nivel actual: {state.user.level}</p>
+              <p>Alcanza el nivel 10 de tienda para abrir franquicias. Nivel actual: {storeLevel}</p>
               <div className="level-bar">
-                <div className="level-fill-bar" style={{ width: `${Math.min(100, (state.user.level / 10) * 100)}%` }} />
+                <div className="level-fill-bar" style={{ width: `${Math.min(100, (storeLevel / 10) * 100)}%` }} />
               </div>
             </div>
           </div>
         )}
 
-        {state.stores.length > 0 && state.user && state.user.level >= 10 && (
+        {storeLevel >= 10 && (
           <div className="card franchise-action">
             <h3>🏪 Tus tiendas como franquiciables</h3>
             <p>Tus tiendas pueden convertirse en marcas franquiciables. Configúralo desde la gestión de cada tienda.</p>

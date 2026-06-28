@@ -6,6 +6,9 @@ import './Navbar.css'
 export default function Navbar() {
   const { state, logout } = useGame()
   const navigate = useNavigate()
+  const maxStoreLevel = state.stores?.length > 0 
+    ? Math.max(...state.stores.map(s => (s as any).level || 1))
+    : state.user?.level || 1
 
   const handleLogout = () => {
     logout()
@@ -27,8 +30,8 @@ export default function Navbar() {
           {state.user ? (
             <>
               <Link to="/dashboard" className="nav-link">Mi Tienda</Link>
-              {state.user.level >= 5 && <Link to="/white-label" className="nav-link">🏷️ Marca Blanca</Link>}
-              {state.user.level >= 10 && <Link to="/franchises" className="nav-link">🏢 Franquicias</Link>}
+              {maxStoreLevel >= 5 && <Link to="/white-label" className="nav-link">🏷️ Marca Blanca</Link>}
+              {maxStoreLevel >= 10 && <Link to="/franchises" className="nav-link">🏢 Franquicias</Link>}
               <div className="nav-user">
                 <div className="nav-user-info">
                   <span className="nav-level">Nv.{state.user.level}</span>
