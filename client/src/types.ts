@@ -169,6 +169,14 @@ export interface Product {
   seasonMonths: number[]
   isWhiteLabel: boolean
   isActive: boolean
+  whiteLabelDesign?: {
+    ownerId: string
+    brandName: string
+    logoUrl?: string
+    approved: boolean
+    royaltyPercentage: number
+    totalRoyaltiesEarned: number
+  }
 }
 
 export interface Category {

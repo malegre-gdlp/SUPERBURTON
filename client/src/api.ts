@@ -59,7 +59,7 @@ export const storeApi = {
 // CATALOG
 // ============================================================
 export const catalogApi = {
-  getAll: (params?: { category?: string; search?: string; page?: number }) =>
+  getAll: (params?: { category?: string; search?: string; page?: number; limit?: number }) =>
     api.get<{ products: Product[]; total: number; page: number; totalPages: number }>('/catalog', { params }),
   getById: (id: string) => api.get<{ product: Product }>(`/catalog/${id}`),
   getCategories: () => api.get<{ categories: Category[] }>('/catalog/meta/categories'),

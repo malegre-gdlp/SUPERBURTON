@@ -35,7 +35,7 @@ export default function StoreView() {
 
   const loadCatalog = async () => {
     try {
-      const { data } = await catalogApi.getAll({ limit: 200 })
+      const { data } = await catalogApi.getAll({})
       setCatalog(data.products)
     } catch {}
   }
@@ -162,7 +162,7 @@ export default function StoreView() {
                   <p><strong>Ubicación:</strong> {districtEmojis[store.districtType]} {store.districtName}</p>
                   <p><strong>Estanterías:</strong> {store.shelves.length}</p>
                   <p><strong>Empleados:</strong> {store.employees.length}</p>
-                  <p><strong>Productos en tienda:</strong> {store.getTotalProducts ? store.getTotalProducts() : store.shelves.reduce((t, s) => t + s.products.reduce((p, sp) => p + sp.quantity, 0), 0)}</p>
+                  <p><strong>Productos en tienda:</strong> {store.shelves.reduce((t, s) => t + s.products.reduce((p, sp) => p + sp.quantity, 0), 0)}</p>
                 </div>
                 {tickResult && (
                   <div className="tick-result">
