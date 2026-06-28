@@ -105,16 +105,15 @@ export default function StoreView() {
     catch { notify('error','Error') }
   }
 
-  const buy = async (pid:string) => {
+  const buy = async (pid:string, price:number, pname:string) => {
     if (!s) return
-    const p = gp(pid); if (!p) return
-    const cost = (p.wholesalePrice||0) * buyQty
+    const q = buyQty
+    const cost = price * q
     if (money < cost) { notify('error', `💰 Necesitas ${cost.toFixed(2)}€, tienes ${money.toFixed(2)}€`); return }
     try {
-      const { data } = await storeApi.addToWarehouse(s._id, { productId:pid, quantity:buyQty, purchasePrice:p.wholesalePrice||0 })
-      notify('success', `✅ ${buyQty} x ${p.name} — ${(p.wholesalePrice||0).toFixed(2)}€/ud`)
+      await storeApi.addToWarehouse(s._id, { productId:pid, quantity:q, purchasePrice:price })
+      notify('success', `✅ ${q} x ${pname} — ${price.toFixed(2)}€/ud`)
       loadStore(); loadUser()
-      if (data?.money !== undefined) dispatch({ type:'SET_USER', payload:{...state.user, money:data.money} as any })
     } catch (e:any) { notify('error', e?.response?.data?.error || 'Error al comprar') }
   }
 
@@ -307,7 +306,7 @@ export default function StoreView() {
             {cat.filter(x => x.isActive).slice(0,60).map(p => {
               const cost = ((p.wholesalePrice||0) * buyQty).toFixed(2)
               const canBuy = money >= (p.wholesalePrice||0) * buyQty
-              return <div key={p._id} onClick={() => canBuy ? buy(p._id) : null}
+              return <div key={p._id} onClick={() => canBuy ? buy(p._id, p.wholesalePrice||0.01, p.name) : null}
                 style={{border:`1px solid ${C[p.category]||'#eee'}44`,borderRadius:8,padding:'8px 10px',cursor:canBuy?'pointer':'not-allowed',background:'var(--color-bg)',opacity:canBuy?1:.5,transition:'all .15s'}}>
                 <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:4}}>
                   <span style={{fontSize:16}}>{I[p.category]}</span>
