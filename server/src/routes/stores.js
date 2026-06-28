@@ -30,6 +30,12 @@ async function fillWarehouse(store) {
 
 // Restock shelves from warehouse (moves products with same category)
 async function restockFromWarehouse(store) {
+  // If warehouse is empty, fill it first
+  const hasWarehouse = store.warehouse && store.warehouse.length > 0 && store.warehouse.some(w => w.quantity > 0);
+  if (!hasWarehouse) {
+    await fillWarehouse(store);
+  }
+
   const products = await Product.find({ isActive: true }).select('_id category name');
   const productMap = {};
   for (const p of products) productMap[p._id.toString()] = p;

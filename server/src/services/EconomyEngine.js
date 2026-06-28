@@ -541,6 +541,34 @@ class EconomyEngine {
 
     // Auto-restock: employees refill shelves from warehouse
     let restockedCount = 0;
+    
+    // If warehouse is empty, try to fill it first
+    const hasWarehouseStock = store.warehouse && store.warehouse.length > 0 && store.warehouse.some(w => w.quantity > 0);
+    if (!hasWarehouseStock) {
+      // Look up products to fill warehouse by category
+      const Product = require('../models/Product');
+      const products = await Product.find({ isActive: true });
+      for (const shelf of store.shelves) {
+        if (shelf.type === 'checkout') continue;
+        const catProducts = products.filter(p => p.category === shelf.category);
+        const picked = catProducts.sort(() => Math.random() - 0.5).slice(0, Math.min(3, catProducts.length));
+        for (const p of picked) {
+          const existing = store.warehouse.find(w => w.productId.toString() === p._id.toString());
+          if (!existing) {
+            store.warehouse.push({
+              productId: p._id,
+              quantity: Math.floor(Math.random() * 50) + 30,
+              minStock: 10,
+              purchasePrice: p.wholesalePrice
+            });
+          } else if (existing.quantity < existing.minStock) {
+            existing.quantity += Math.floor(Math.random() * 30) + 20;
+          }
+        }
+      }
+    }
+
+    // Restock shelves from warehouse
     for (const shelf of store.shelves) {
       if (shelf.type === 'checkout') continue;
       for (const warehouseItem of store.warehouse) {
