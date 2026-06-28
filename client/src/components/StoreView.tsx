@@ -75,6 +75,12 @@ export default function StoreView() {
     } catch {}
   }
   const getP = (pid:string) => catalog.find(p => p._id === pid)
+  const handleDrop = (targetIdx:number) => {
+    if (draggingShelf !== null && draggingShelf !== targetIdx && store) {
+      const s = [...store.shelves]; const [m] = s.splice(draggingShelf,1); s.splice(targetIdx,0,m);
+      setStore({...store, shelves:s}); setDraggingShelf(null)
+    }
+  }
 
   const doTick = async () => {
     if (!store) return
@@ -246,11 +252,10 @@ export default function StoreView() {
           <div className="store-grid" style={{ gridTemplateColumns: `repeat(${Math.max(5, Math.ceil(store.shelves.length/2)+2)}, 60px)` }}>
             {store.shelves.map((shelf, i) => (
               <div key={i} className="shelf-block" style={{ borderColor: catColors[shelf.category] || '#ccc' }}
-                draggable onDragStart={() => setDraggingShelf(i)}
+                draggable 
+                onDragStart={() => setDraggingShelf(i)}
                 onDragOver={e => e.preventDefault()}
-                onDrop={() => { if (draggingShelf !== null && draggingShelf !== i) {
-                  const s = [...store.shelves]; const [m] = s.splice(draggingShelf,1); s.splice(i,0,m); setStore({...store, shelves:s}); setDraggingShelf(null)
-                }}>
+                onDrop={handleDrop.bind(null, i)}>
                 <div className="shelf-block-header" style={{ background: catColors[shelf.category] || '#ccc' }}>
                   {catIcons[shelf.category]} {shelf.category.slice(0,4)}
                 </div>
@@ -365,7 +370,7 @@ export default function StoreView() {
         <div className="modal card" onClick={e => e.stopPropagation()}>
           <h3>👥 Contratar empleado</h3>
           {Object.entries(roleSalaries).map(([role, salary]) => (
-            <div key={role} className="hire-option" onClick={() => hireEmployee(role, `${role} ${store.employees.length+1}`)}>
+            <div key={role} className="hire-option" onClick={() => hireEmployee(role, role + ' ' + ((store?.employees.length||0) + 1))}>
               <div className="hire-info">
                 <span className="hire-role">{role}</span>
                 <span className="hire-salary">💰 {salary}€/día</span>
