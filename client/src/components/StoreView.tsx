@@ -149,6 +149,7 @@ export default function StoreView() {
               <span>{D[s.districtType]||'📍'} {s.districtName}</span>
               <span>⭐ {s.stats.rating.toFixed(1)}</span>
               <span>📅 Día {day}</span>
+              <span>⭐ Nv.{s.level||1}</span>
               <span>💰 {money.toFixed(2)}€</span>
               <span>📦 {totStock}</span>
             </div>
@@ -179,6 +180,17 @@ export default function StoreView() {
               <div className="stat-box"><span className="stat-big">{s.stats.rating.toFixed(1)}⭐</span><span>Rating</span></div>
               <div className="stat-box"><span className="stat-big">{money.toFixed(0)}€</span><span>Tu dinero</span></div>
               <div className="stat-box"><span className="stat-big">{s.employees.length}</span><span>Empleados</span></div>
+              <div className="stat-box"><span className="stat-big">Nv.{s.level||1}</span><span>Nivel</span></div>
+            </div>
+            {/* XP bar */}
+            <div style={{marginTop:10,background:'var(--color-bg)',borderRadius:8,padding:8}}>
+              <div style={{display:'flex',justifyContent:'space-between',fontSize:11,marginBottom:4}}>
+                <span>⭐ Nivel {s.level||1}</span>
+                <span>{s.experience||0} XP</span>
+              </div>
+              <div style={{background:'var(--color-border)',borderRadius:4,height:6,overflow:'hidden'}}>
+                <div style={{background:'linear-gradient(90deg,#4CAF50,#8BC34A)',height:'100%',borderRadius:4,width:Math.min(100,((s.experience||0)%500)/500*100)+'%',transition:'width .5s'}}/>
+              </div>
             </div>
           </div>
           <div className="card">

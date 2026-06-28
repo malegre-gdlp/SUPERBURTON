@@ -411,7 +411,7 @@ class EconomyEngine {
     const prodMap = {};
     for (const p of allProducts) prodMap[p._id.toString()] = p;
 
-    const customers = Math.min(this.calculateCustomerCount(store), 15);
+    const customers = Math.min(this.calculateCustomerCount(store), store.getMaxCustomers());
     let totalSales = 0, totalRevenue = 0, totalProfit = 0;
     let productsSold = [];
     let rejectedPurchases = [];
@@ -510,6 +510,9 @@ class EconomyEngine {
         }
       }
     }
+
+    // Award experience and level up
+    store.addExperience(totalSales, customers, totalRevenue);
 
     await store.save();
 

@@ -127,6 +127,8 @@ const storeSchema = new mongoose.Schema({
     deliveryService: { type: Boolean, default: false },
     onlineStore: { type: Boolean, default: false }
   },
+  level: { type: Number, default: 1 },
+  experience: { type: Number, default: 0 },
   isOpen: { type: Boolean, default: false },
   isFranchise: { type: Boolean, default: false },
   franchiseOf: {
@@ -240,6 +242,34 @@ storeSchema.methods.getSpendingRange = function() {
 storeSchema.methods.getDistrictProfile = function() {
   return storeSchema.statics.DISTRICT_PROFILES[this.districtType] ||
     storeSchema.statics.DISTRICT_PROFILES.barrio;
+};
+
+/* Level system: gain experience from sales, level up */
+const XP_PER_SALE = 10;
+const XP_PER_CUSTOMER = 5;
+const XP_PER_REVENUE_UNIT = 2; // per euro
+const BASE_XP_NEXT = 500;
+const XP_SCALE = 1.4;
+
+storeSchema.methods.addExperience = function(sales, customers, revenue) {
+  const xp = sales * XP_PER_SALE + customers * XP_PER_CUSTOMER + revenue * XP_PER_REVENUE_UNIT;
+  this.experience += Math.floor(xp);
+  // Level up while enough XP
+  let needed = Math.floor(BASE_XP_NEXT * Math.pow(XP_SCALE, this.level - 1));
+  while (this.experience >= needed) {
+    this.experience -= needed;
+    this.level += 1;
+    needed = Math.floor(BASE_XP_NEXT * Math.pow(XP_SCALE, this.level - 1));
+  }
+};
+
+/* Get level bonus multiplier for customers */
+storeSchema.methods.getLevelMultiplier = function() {
+  return 1 + (this.level - 1) * 0.15; // +15% per level
+};
+
+storeSchema.methods.getMaxCustomers = function() {
+  return 10 + this.level * 5 + this.shelves.length * 2 + this.employees.length * 3;
 };
 
 const StoreModel = mongoose.model('Store', storeSchema);

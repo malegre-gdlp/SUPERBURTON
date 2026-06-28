@@ -45,6 +45,8 @@ export interface Store {
   warehouse: WarehouseItem[]
   stats: StoreStats
   customerLoyalty: number
+  level: number
+  experience: number
   upgrades: Upgrades
   isOpen: boolean
   isFranchise: boolean
