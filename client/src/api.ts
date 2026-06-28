@@ -54,7 +54,7 @@ export const storeApi = {
   addToWarehouse: (id: string, data: { productId: string; quantity: number; purchasePrice: number }) =>
     api.post(`/stores/${id}/warehouse`, data),
   restock: (id: string) =>
-    api.post<{ store: Store }>(`/stores/${id}/restock`)
+    api.post<{ restocked: number; warehouse: any[]; shelves: any[] }>(`/stores/${id}/restock`)
 }
 
 // ============================================================
