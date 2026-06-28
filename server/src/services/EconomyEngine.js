@@ -408,13 +408,13 @@ class EconomyEngine {
 
     // Load products ONCE (avoid N+1 queries)
     const allProducts = await Product.find({ isActive: true }).select('_id name wholesalePrice basePrice quality rarity demandFactor category').lean();
-    const prodMap :any= {};
+    const prodMap = {};
     for (const p of allProducts) prodMap[p._id.toString()] = p;
 
-    const customers = Math.min(this.calculateCustomerCount(store), 15); // cap for performance
+    const customers = Math.min(this.calculateCustomerCount(store), 15);
     let totalSales = 0, totalRevenue = 0, totalProfit = 0;
-    let productsSold:any[] = [];
-    let rejectedPurchases:any[] = [];
+    let productsSold = [];
+    let rejectedPurchases = [];
     let totalSatisfactionDelta = 0;
 
     // Simulate smart customer purchases (using cached products)
