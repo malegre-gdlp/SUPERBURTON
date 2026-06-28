@@ -19,6 +19,8 @@ export default function StoreView() {
   const [tr, setTr] = useState<any>(null)
   const [day, setDay] = useState(1)
   const [cust, setCust] = useState<any[]>([])
+  const [showBuy, setShowBuy] = useState(false)
+  const [buyQty, setBuyQty] = useState(10)
   const tickRef = useRef(false)
 
   useEffect(() => { loadStore(); loadCat(); loadDay() }, [id])
@@ -106,8 +108,14 @@ export default function StoreView() {
   const buy = async (pid:string) => {
     if (!s) return
     const p = gp(pid); if (!p) return
-    try { await storeApi.addToWarehouse(s._id, { productId:pid, quantity:10, purchasePrice:p.wholesalePrice }); notify('success',`10 x ${p.name}`); loadStore(); loadUser() }
-    catch (e:any) { notify('error', e?.response?.data?.error || 'Error') }
+    const cost = (p.wholesalePrice||0) * buyQty
+    if (money < cost) { notify('error', `💰 Necesitas ${cost.toFixed(2)}€, tienes ${money.toFixed(2)}€`); return }
+    try {
+      const { data } = await storeApi.addToWarehouse(s._id, { productId:pid, quantity:buyQty, purchasePrice:p.wholesalePrice||0 })
+      notify('success', `✅ ${buyQty} x ${p.name} — ${(p.wholesalePrice||0).toFixed(2)}€/ud`)
+      loadStore(); loadUser()
+      if (data?.money !== undefined) dispatch({ type:'SET_USER', payload:{...state.user, money:data.money} as any })
+    } catch (e:any) { notify('error', e?.response?.data?.error || 'Error al comprar') }
   }
 
   const addShelf = async () => {
@@ -157,7 +165,7 @@ export default function StoreView() {
           <div className="store-header-actions">
             <button className="btn btn-sm btn-secondary" onClick={doRestock}>📦 Restock</button>
             <button className="btn btn-sm btn-secondary" onClick={doTick}>⏭️ Tick</button>
-            <button className="btn btn-sm btn-primary" onClick={() => setTab('products')}>🛍️ Comprar</button>
+            <button className="btn btn-sm btn-primary" onClick={() => setShowBuy(true)}>🛍️ Comprar</button>
           </div>
         </div>
 
@@ -260,28 +268,7 @@ export default function StoreView() {
               </div>
             </div>
           ))}
-          {s.shelves.every(sh => sh.products.length === 0) && <div className="card"><p style={{textAlign:'center',color:'var(--color-text-secondary)',padding:20}}>📭 Sin productos. Pulsa Restock o compra en el mercado.</p></div>}
-
-          {/* Buy - graphical grid */}
-          <div className="card" style={{marginTop:8}}>
-            <h3>🛍️ Mercado Mayorista</h3>
-            <p style={{fontSize:12,color:'var(--color-text-secondary)',marginBottom:8}}>💰 <b>{money.toFixed(2)}€</b> — compra 10 uds por producto</p>
-            <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(180px,1fr))',gap:6,maxHeight:500,overflowY:'auto'}}>
-              {cat.filter(x => x.isActive).slice(0,50).map(p => (
-                <div key={p._id} className="buy-card" onClick={() => buy(p._id)}
-                  style={{border:`1px solid ${C[p.category]||'#eee'}44`,borderRadius:8,padding:'8px 10px',cursor:'pointer',background:'var(--color-bg)',transition:'all .15s'}}>
-                  <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:4}}>
-                    <span style={{fontSize:18}}>{I[p.category]}</span>
-                    <span style={{fontSize:12,fontWeight:600,flex:1}}>{p.name}</span>
-                  </div>
-                  <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-                    <span style={{fontSize:13,fontWeight:700,color:C[p.category]||'var(--color-primary)'}}>{p.wholesalePrice.toFixed(2)}€</span>
-                    <span style={{fontSize:10,color:'var(--color-text-secondary)'}}>★ {p.quality||50} calidad</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+          {s.shelves.every(sh => sh.products.length === 0) && <div className="card"><p style={{textAlign:'center',color:'var(--color-text-secondary)',padding:20}}>📭 Sin productos. Haz click en 🛍️ Comprar.</p></div>}
         </div>}
 
         {/* ═══ EMPLOYEES ═══ */}
@@ -302,7 +289,40 @@ export default function StoreView() {
           ))}
           {s.employees.length === 0 && <p style={{color:'var(--color-text-secondary)',textAlign:'center'}}>Sin empleados. Contrata arriba ↑</p>}
         </div>}
-      </div>
+
+      {/* ═══ BUY MODAL ═══ */}
+      {showBuy && <div className="modal-overlay" onClick={() => setShowBuy(false)}>
+        <div className="modal card modal-wide" onClick={e => e.stopPropagation()} style={{maxWidth:700}}>
+          <div className="modal-header"><h3 style={{margin:0}}>🛍️ Mercado Mayorista</h3>
+            <button className="btn btn-ghost" onClick={() => setShowBuy(false)}>✕</button>
+          </div>
+          <div style={{display:'flex',alignItems:'center',gap:12,margin:'8px 0 12px',fontSize:13}}>
+            <span>💰 <b>{money.toFixed(2)}€</b></span>
+            <span style={{display:'flex',alignItems:'center',gap:4}}>
+              Cantidad: <input type="number" min={1} max={999} value={buyQty} onChange={e => setBuyQty(parseInt(e.target.value)||1)}
+                style={{width:55,padding:'3px 6px',border:'1px solid var(--color-border)',borderRadius:4,fontSize:13,textAlign:'center'}}/>
+            </span>
+          </div>
+          <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(180px,1fr))',gap:6,maxHeight:400,overflowY:'auto'}}>
+            {cat.filter(x => x.isActive).slice(0,60).map(p => {
+              const cost = ((p.wholesalePrice||0) * buyQty).toFixed(2)
+              const canBuy = money >= (p.wholesalePrice||0) * buyQty
+              return <div key={p._id} onClick={() => canBuy ? buy(p._id) : null}
+                style={{border:`1px solid ${C[p.category]||'#eee'}44`,borderRadius:8,padding:'8px 10px',cursor:canBuy?'pointer':'not-allowed',background:'var(--color-bg)',opacity:canBuy?1:.5,transition:'all .15s'}}>
+                <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:4}}>
+                  <span style={{fontSize:16}}>{I[p.category]}</span>
+                  <span style={{fontSize:12,fontWeight:600,flex:1}}>{p.name}</span>
+                </div>
+                <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',fontSize:12}}>
+                  <span style={{fontWeight:700,color:C[p.category]||'var(--color-primary)'}}>{(p.wholesalePrice||0).toFixed(2)}€</span>
+                  <span>★ {p.quality||50}</span>
+                  <span style={{fontWeight:600}}>{canBuy?'✅':'🔴'} {cost}€</span>
+                </div>
+              </div>
+            })}
+          </div>
+        </div>
+      </div>}
     </div>
   )
 }
