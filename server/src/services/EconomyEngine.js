@@ -406,104 +406,58 @@ class EconomyEngine {
   async processStoreTick(store) {
     if (!store.isOpen) return null;
 
-    // First, apply price fairness evaluation
-    await this.applyPriceAbusePenalties(store);
+    // Load products ONCE (avoid N+1 queries)
+    const allProducts = await Product.find({ isActive: true }).select('_id name wholesalePrice basePrice quality rarity demandFactor category').lean();
+    const prodMap :any= {};
+    for (const p of allProducts) prodMap[p._id.toString()] = p;
 
-    const customers = this.calculateCustomerCount(store);
-    let totalSales = 0;
-    let totalRevenue = 0;
-    let totalProfit = 0;
-    let productsSold = [];
-    let rejectedPurchases = [];
+    const customers = Math.min(this.calculateCustomerCount(store), 15); // cap for performance
+    let totalSales = 0, totalRevenue = 0, totalProfit = 0;
+    let productsSold:any[] = [];
+    let rejectedPurchases:any[] = [];
     let totalSatisfactionDelta = 0;
 
-    // Simulate smart customer purchases
+    // Simulate smart customer purchases (using cached products)
     for (let i = 0; i < customers; i++) {
       const spendingLimit = this.getCustomerSpendingLimit(store);
       let remainingBudget = spendingLimit;
-      let customerBasket = [];
+      let customerBasket: any[] = [];
       let customerSatisfied = true;
 
-      // Each customer visits several shelves
-      const shelfVisits = Math.min(store.shelves.length, Math.floor(Math.random() * 5) + 1);
+      const shelfVisits = Math.min(store.shelves.length, Math.floor(Math.random() * 3) + 1);
       const visitedShelves = this._shuffleArray([...store.shelves]).slice(0, shelfVisits);
 
       for (const shelf of visitedShelves) {
-        if (remainingBudget <= 0) break;
-        if (!shelf.products.length) continue;
-
-        // Pick a random product from this shelf
+        if (remainingBudget <= 0 || !shelf.products.length) break;
         const shelfProduct = shelf.products[Math.floor(Math.random() * shelf.products.length)];
         if (shelfProduct.quantity <= 0) continue;
 
-        const product = await Product.findById(shelfProduct.productId);
+        const product = prodMap[shelfProduct.productId.toString()];
         if (!product) continue;
 
-        // Evaluate the product
-        const evaluation = this.evaluateProductForCustomer(product, shelfProduct, store);
+        // Simple evaluation: compare price vs basePrice * quality factor
+        const fairPrice = product.basePrice * (1 + (product.quality || 50) / 200);
+        const priceRatio = shelfProduct.price / fairPrice;
+        const willBuy = priceRatio < 1.5 && shelfProduct.price <= remainingBudget && Math.random() > (priceRatio - 0.8) * 0.5;
+        const score = Math.max(0, Math.min(100, Math.round((1 - Math.max(0, priceRatio - 0.8)) * 100)));
 
-        if (evaluation.willBuy && shelfProduct.price <= remainingBudget) {
-          // Customer wants to buy
-          const quantity = Math.max(1,
-            Math.min(
-              Math.floor(Math.random() * 2) + 1,
-              shelfProduct.quantity,
-              Math.floor(remainingBudget / shelfProduct.price)
-            )
-          );
-
-          if (quantity > 0) {
-            const cost = quantity * shelfProduct.price;
+        if (willBuy) {
+          const qty = Math.max(1, Math.min(shelfProduct.quantity, Math.floor(remainingBudget / shelfProduct.price), 2));
+          if (qty > 0) {
+            const cost = qty * shelfProduct.price;
             remainingBudget -= cost;
-            shelfProduct.quantity -= quantity;
-
-            // Find warehouse entry for cost
-            const warehouseItem = store.warehouse.find(
-              w => w.productId.toString() === shelfProduct.productId.toString()
-            );
-            const costPrice = warehouseItem ? warehouseItem.purchasePrice : (product.wholesalePrice || 0);
-
-            customerBasket.push({
-              productId: shelfProduct.productId,
-              productName: product.name,
-              quantity,
-              unitPrice: shelfProduct.price,
-              totalCost: cost,
-              profit: quantity * (shelfProduct.price - costPrice)
-            });
-
-            totalSales += quantity;
-            totalRevenue += cost;
-            totalProfit += quantity * (shelfProduct.price - costPrice);
-
-            // Satisfaction based on value score
-            if (evaluation.score < 50) customerSatisfied = false;
+            shelfProduct.quantity -= qty;
+            const costPrice = product.wholesalePrice || 0;
+            totalSales += qty; totalRevenue += cost; totalProfit += qty * (shelfProduct.price - costPrice);
+            if (score < 40) customerSatisfied = false;
           }
-        } else if (!evaluation.willBuy) {
-          // Record rejected purchase (too expensive)
-          rejectedPurchases.push({
-            productId: shelfProduct.productId,
-            productName: product.name,
-            price: shelfProduct.price,
-            reason: evaluation.reasons.join(', '),
-            score: evaluation.score
-          });
-
-          if (evaluation.priceFairnessScore < 30) {
-            customerSatisfied = false;
-          }
+        } else {
+          rejectedPurchases.push({ productId: shelfProduct.productId, productName: product.name, price: shelfProduct.price, reason: priceRatio > 1.5 ? 'Muy caro' : 'No le gusta', score });
+          if (score < 30) customerSatisfied = false;
         }
       }
-
-      if (customerBasket.length > 0) {
-        productsSold.push(...customerBasket);
-      }
-
-      if (!customerSatisfied) {
-        totalSatisfactionDelta -= 1;
-      } else if (customerBasket.length > 0) {
-        totalSatisfactionDelta += 0.5;
-      }
+      if (customerSatisfied && Math.random() > 0.5) totalSatisfactionDelta += 0.5;
+      else if (!customerSatisfied) totalSatisfactionDelta -= 1;
     }
 
     // Update store stats
@@ -539,54 +493,20 @@ class EconomyEngine {
     // Pay employees
     const totalSalaries = store.employees.reduce((sum, e) => sum + e.salary, 0);
 
-    // Auto-restock: employees refill shelves from warehouse (lightweight)
+    // Auto-restock: simply move warehouse items to shelves (no DB queries)
     let restockedCount = 0;
-    const Product = require('../models/Product');
-
     for (const shelf of store.shelves) {
       if (shelf.type === 'checkout') continue;
-      
-      // Find warehouse items for this shelf's category using product lookup
-      const shelfWarehouseItems = store.warehouse.filter(w => w.quantity > 0);
-      
-      for (const warehouseItem of shelfWarehouseItems) {
-        if (warehouseItem.quantity <= 0) continue;
-        const shelfProduct = shelf.products.find(
-          sp => sp.productId.toString() === warehouseItem.productId.toString()
-        );
-        if (shelfProduct) {
-          const spaceLeft = shelfProduct.maxCapacity - shelfProduct.quantity;
-          if (spaceLeft > 0) {
-            const toAdd = Math.min(warehouseItem.quantity, spaceLeft, 10);
-            shelfProduct.quantity += toAdd;
-            warehouseItem.quantity -= toAdd;
-            restockedCount += toAdd;
-          }
+      for (const w of store.warehouse) {
+        if (w.quantity <= 0) continue;
+        const sp = shelf.products.find(x => x.productId.toString() === w.productId.toString());
+        if (sp) {
+          const add = Math.min(w.quantity, sp.maxCapacity - sp.quantity, 10);
+          if (add > 0) { sp.quantity += add; w.quantity -= add; restockedCount += add; }
         } else {
-          shelf.products.push({
-            productId: warehouseItem.productId,
-            quantity: Math.min(warehouseItem.quantity, 10),
-            maxCapacity: 50,
-            price: Math.round(warehouseItem.purchasePrice * 1.3 * 100) / 100
-          });
-          const added = Math.min(warehouseItem.quantity, 10);
-          warehouseItem.quantity -= added;
-          restockedCount += added;
-        }
-      }
-      
-      // If shelf still has few products, fill warehouse with category products
-      if (shelf.products.length < 2) {
-        const catProducts = await Product.find({ category: shelf.category, isActive: true }).select('_id wholesalePrice').limit(5);
-        for (const p of catProducts) {
-          if (!store.warehouse.find(w => w.productId.toString() === p._id.toString())) {
-            store.warehouse.push({
-              productId: p._id,
-              quantity: 50 + Math.floor(Math.random() * 30),
-              minStock: 10,
-              purchasePrice: p.wholesalePrice
-            });
-          }
+          const add = Math.min(w.quantity, 10);
+          shelf.products.push({ productId: w.productId, quantity: add, maxCapacity: 50, price: Math.round(w.purchasePrice * 1.3 * 100) / 100 });
+          w.quantity -= add; restockedCount += add;
         }
       }
     }
@@ -599,8 +519,9 @@ class EconomyEngine {
       totalRevenue,
       totalProfit,
       totalSalaries,
-      netProfit: totalRevenue - totalSalaries - (totalRevenue - totalProfit), // revenue - salaries - cost of goods
-      productsSold,      restocked: restockedCount,      rejectedPurchases: rejectedPurchases.slice(0, 5),
+      netProfit: totalRevenue - totalSalaries - (totalRevenue - totalProfit),
+      restocked: restockedCount,
+      rejectedPurchases: rejectedPurchases.slice(0, 5),
       customerSatisfaction: store.stats.customerSatisfaction,
       customerLoyalty: store.customerLoyalty,
       priceFairnessReputation: store.stats.priceFairnessReputation,
