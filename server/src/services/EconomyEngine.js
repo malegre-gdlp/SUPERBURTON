@@ -539,6 +539,38 @@ class EconomyEngine {
     // Pay employees
     const totalSalaries = store.employees.reduce((sum, e) => sum + e.salary, 0);
 
+    // Auto-restock: employees refill shelves from warehouse
+    let restockedCount = 0;
+    for (const shelf of store.shelves) {
+      if (shelf.type === 'checkout') continue;
+      for (const warehouseItem of store.warehouse) {
+        if (warehouseItem.quantity <= 0) continue;
+        const shelfProduct = shelf.products.find(
+          sp => sp.productId.toString() === warehouseItem.productId.toString()
+        );
+        if (shelfProduct) {
+          const spaceLeft = shelfProduct.maxCapacity - shelfProduct.quantity;
+          if (spaceLeft > 0) {
+            const toAdd = Math.min(warehouseItem.quantity, spaceLeft);
+            shelfProduct.quantity += toAdd;
+            warehouseItem.quantity -= toAdd;
+            restockedCount += toAdd;
+          }
+        } else {
+          // Add new product to shelf from warehouse
+          shelf.products.push({
+            productId: warehouseItem.productId,
+            quantity: Math.min(warehouseItem.quantity, 20),
+            maxCapacity: 50,
+            price: Math.round(warehouseItem.purchasePrice * 1.3 * 100) / 100
+          });
+          const added = Math.min(warehouseItem.quantity, 20);
+          warehouseItem.quantity -= added;
+          restockedCount += added;
+        }
+      }
+    }
+
     await store.save();
 
     return {
@@ -548,8 +580,7 @@ class EconomyEngine {
       totalProfit,
       totalSalaries,
       netProfit: totalRevenue - totalSalaries - (totalRevenue - totalProfit), // revenue - salaries - cost of goods
-      productsSold,
-      rejectedPurchases: rejectedPurchases.slice(0, 5),
+      productsSold,      restocked: restockedCount,      rejectedPurchases: rejectedPurchases.slice(0, 5),
       customerSatisfaction: store.stats.customerSatisfaction,
       customerLoyalty: store.customerLoyalty,
       priceFairnessReputation: store.stats.priceFairnessReputation,

@@ -52,6 +52,17 @@ export default function StoreView() {
     }
   }
 
+  const handleRestock = async () => {
+    if (!store) return
+    try {
+      const { data } = await storeApi.restock(store._id)
+      notify('success', `📦 ${data.restocked} productos repuestos desde el almacén`)
+      loadStore()
+    } catch (err: any) {
+      notify('error', 'Error al re-stockear')
+    }
+  }
+
   const handleSetPrice = async (shelfIndex: number, productIndex: number, newPrice: number) => {
     if (!store) return
     const updated = { ...store }
@@ -90,6 +101,9 @@ export default function StoreView() {
             </div>
           </div>
           <div className="store-header-actions">
+            <button className="btn btn-secondary" onClick={handleRestock}>
+              📦 Restock almacén
+            </button>
             <button className="btn btn-secondary" onClick={handleTick}>
               🛒 Simular clientes
             </button>

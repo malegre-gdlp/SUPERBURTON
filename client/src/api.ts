@@ -52,7 +52,9 @@ export const storeApi = {
   fireEmployee: (id: string, index: number) =>
     api.delete(`/stores/${id}/employees/${index}`),
   addToWarehouse: (id: string, data: { productId: string; quantity: number; purchasePrice: number }) =>
-    api.post(`/stores/${id}/warehouse`, data)
+    api.post(`/stores/${id}/warehouse`, data),
+  restock: (id: string) =>
+    api.post<{ store: Store }>(`/stores/${id}/restock`)
 }
 
 // ============================================================

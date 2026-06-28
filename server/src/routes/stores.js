@@ -5,43 +5,72 @@ const User = require('../models/User');
 const Product = require('../models/Product');
 const { auth } = require('../middleware/auth');
 
-// Auto-stock a store's shelves with products from matching categories
-async function autoStockStore(store) {
+// Fill warehouse with initial products for a new store
+async function fillWarehouse(store) {
   try {
     const products = await Product.find({ isActive: true });
     for (const shelf of store.shelves) {
       if (shelf.type === 'checkout') continue;
       const catProducts = products.filter(p => p.category === shelf.category);
-      // Pick 3-5 random products from the category
       const picked = catProducts.sort(() => Math.random() - 0.5).slice(0, Math.min(5, catProducts.length));
       for (const p of picked) {
-        const existing = shelf.products.find(sp => sp.productId.toString() === p._id.toString());
-        if (!existing) {
-          shelf.products.push({
-            productId: p._id,
-            quantity: Math.floor(Math.random() * 30) + 15,
-            maxCapacity: 50,
-            price: Math.round(p.basePrice * 1.3 * 100) / 100
-          });
-        }
-      }
-      // Also stock warehouse
-      for (const p of picked) {
-        const existing = store.warehouse.find(w => w.productId.toString() === p._id.toString());
-        if (!existing) {
-          store.warehouse.push({
-            productId: p._id,
-            quantity: Math.floor(Math.random() * 100) + 50,
-            minStock: 20,
-            purchasePrice: p.wholesalePrice
-          });
-        }
+        store.warehouse.push({
+          productId: p._id,
+          quantity: Math.floor(Math.random() * 100) + 80,
+          minStock: 20,
+          purchasePrice: p.wholesalePrice
+        });
       }
     }
     await store.save();
   } catch (e) {
-    console.error('Auto-stock error:', e.message);
+    console.error('Warehouse fill error:', e.message);
   }
+}
+
+// Restock shelves from warehouse (moves products with same category)
+async function restockFromWarehouse(store) {
+  const products = await Product.find({ isActive: true }).select('_id category name');
+  const productMap = {};
+  for (const p of products) productMap[p._id.toString()] = p;
+
+  let restocked = 0;
+  for (const shelf of store.shelves) {
+    if (shelf.type === 'checkout') continue;
+
+    // Get warehouse items whose product category matches this shelf
+    const matchingWarehouse = store.warehouse.filter(w => {
+      const prod = productMap[w.productId.toString()];
+      return prod && prod.category === shelf.category && w.quantity > 0;
+    });
+
+    for (const w of matchingWarehouse) {
+      const existing = shelf.products.find(sp => sp.productId.toString() === w.productId.toString());
+      const maxCap = existing ? existing.maxCapacity : 50;
+      const currentQty = existing ? existing.quantity : 0;
+      const spaceLeft = maxCap - currentQty;
+
+      if (spaceLeft <= 0) continue;
+
+      const toAdd = Math.min(w.quantity, spaceLeft, 25);
+      if (toAdd <= 0) continue;
+
+      if (existing) {
+        existing.quantity += toAdd;
+      } else {
+        shelf.products.push({
+          productId: w.productId,
+          quantity: toAdd,
+          maxCapacity: maxCap,
+          price: Math.round(w.purchasePrice * 1.3 * 100) / 100
+        });
+      }
+      w.quantity -= toAdd;
+      restocked++;
+    }
+  }
+  await store.save();
+  return restocked;
 }
 
 // Create a new store
@@ -78,8 +107,10 @@ router.post('/', auth, async (req, res) => {
     });
     await store.save();
 
-    // Auto-stock shelves with products
-    await autoStockStore(store);
+    // Fill warehouse with products (shelves start empty)
+    await fillWarehouse(store);
+    // Restock shelves from warehouse
+    await restockFromWarehouse(store);
 
     // Reload with stocked products
     const stockedStore = await Store.findById(store._id);
@@ -229,6 +260,20 @@ router.delete('/:id/employees/:empIndex', auth, async (req, res) => {
   }
 });
 
+// Restock shelves with products from catalog (for existing stores)
+router.post('/:id/restock', auth, async (req, res) => {
+  try {
+    const store = await Store.findOne({ _id: req.params.id, owner: req.user._id });
+    if (!store) {
+      return res.status(404).json({ error: 'Store not found' });
+    }
+    await autoStockStore(store);
+    res.json({ store });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
 // Add to warehouse
 router.post('/:id/warehouse', auth, async (req, res) => {
   try {
@@ -267,6 +312,20 @@ router.patch('/:id/toggle', auth, async (req, res) => {
     await store.save();
 
     res.json({ store });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// Restock shelves from warehouse
+router.post('/:id/restock', auth, async (req, res) => {
+  try {
+    const store = await Store.findOne({ _id: req.params.id, owner: req.user._id });
+    if (!store) {
+      return res.status(404).json({ error: 'Store not found' });
+    }
+    const restocked = await restockFromWarehouse(store);
+    res.json({ restocked, warehouse: store.warehouse, shelves: store.shelves });
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
