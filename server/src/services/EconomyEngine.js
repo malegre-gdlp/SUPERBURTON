@@ -421,7 +421,7 @@ class EconomyEngine {
     for (let i = 0; i < customers; i++) {
       const spendingLimit = this.getCustomerSpendingLimit(store);
       let remainingBudget = spendingLimit;
-      let customerBasket: any[] = [];
+      let customerBasket = [];
       let customerSatisfied = true;
 
       const shelfVisits = Math.min(store.shelves.length, Math.floor(Math.random() * 3) + 1);
