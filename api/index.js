@@ -2,25 +2,26 @@ const express = require('express');
 const cors = require('cors');
 const mongoose = require('mongoose');
 
-// Database connection cache
-let cachedDb = null;
+// Don't buffer queries if DB is not connected
+mongoose.set('bufferCommands', false);
+
+// Database connection promise (cached for warm starts)
+let dbPromise = null;
+const MONGO_URI = process.env.MONGODB_URI ||
+  'mongodb+srv://junta_db_user:1gQKARcW4PYdbpnO@cluster0.yg22wfb.mongodb.net/supermarket-simulator?retryWrites=true&w=majority&appName=Cluster0';
 
 async function connectToDatabase() {
-  if (cachedDb && cachedDb.readyState === 1) return cachedDb;
-  try {
-    const uri = process.env.MONGODB_URI ||
-      'mongodb+srv://junta_db_user:1gQKARcW4PYdbpnO@cluster0.yg22wfb.mongodb.net/supermarket-simulator?retryWrites=true&w=majority&appName=Cluster0';
-    cachedDb = await mongoose.connect(uri, {
-      serverSelectionTimeoutMS: 5000,
-      connectTimeoutMS: 5000
-    });
-  } catch (err) {
+  if (dbPromise) return dbPromise;
+  dbPromise = mongoose.connect(MONGO_URI, {
+    serverSelectionTimeoutMS: 5000,
+    connectTimeoutMS: 5000
+  }).catch(err => {
     console.error('MongoDB connection error:', err.message);
-  }
+    dbPromise = null; // Reset so next request retries
+    throw err;
+  });
+  return dbPromise;
 }
-
-// Initialize connection
-connectToDatabase();
 
 // Routes
 const authRoutes = require('../server/src/routes/auth');
@@ -36,10 +37,17 @@ app.use(cors({
 }));
 app.use(express.json({ limit: '10mb' }));
 
-// Logging
-app.use((req, res, next) => {
-  console.log(`[${req.method}] ${req.url}`);
-  next();
+// DB connection middleware — ensures DB ready before handling requests
+app.use(async (req, res, next) => {
+  try {
+    await connectToDatabase();
+    next();
+  } catch (err) {
+    res.status(503).json({
+      error: 'Base de datos no disponible. Inténtalo de nuevo.',
+      detail: err.message
+    });
+  }
 });
 
 // Routes
