@@ -36,6 +36,7 @@ const authRoutes = require('../server/src/routes/auth');
 const storeRoutes = require('../server/src/routes/stores');
 const catalogRoutes = require('../server/src/routes/catalog');
 const economyRoutes = require('../server/src/routes/economy');
+const gameRoutes = require('../server/src/routes/game');
 
 const app = express();
 
@@ -84,6 +85,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/stores', storeRoutes);
 app.use('/api/catalog', catalogRoutes);
 app.use('/api/economy', economyRoutes);
+app.use('/api/game', gameRoutes);
 
 // 404
 app.use('/api/*', (req, res) => {
