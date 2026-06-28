@@ -25,27 +25,38 @@ export default function StoreView() {
     loadCatalog()
   }, [])
 
-  // Auto-tick: every 10s when store is open
+  // Auto-tick: every 20s when store is open, with concurrency guard
+  const [isTicking, setIsTicking] = useState(false)
+  const [errorCount, setErrorCount] = useState(0)
+
   useEffect(() => {
     if (!store || !store.isOpen) {
       setAutoTickOn(false)
       return
     }
     setAutoTickOn(true)
+    setErrorCount(0)
     const interval = setInterval(() => {
-      handleAutoTick()
-    }, 10000)
+      if (!isTicking) handleAutoTick()
+    }, 20000)
     return () => clearInterval(interval)
   }, [store?.isOpen, store?._id])
 
   const handleAutoTick = async () => {
-    if (!store || !store.isOpen) return
+    if (!store || !store.isOpen || isTicking) return
+    setIsTicking(true)
     try {
       const { data } = await economyApi.tickStore(store._id)
       setTickResult(data.result)
       setActivityLog(prev => [{ ...data.result, time: new Date() }, ...prev].slice(0, 50))
+      setErrorCount(0)
       loadStore()
-    } catch { /* silent */ }
+    } catch {
+      setErrorCount(c => c + 1)
+      if (errorCount > 3) setAutoTickOn(false)
+    } finally {
+      setIsTicking(false)
+    }
   }
 
   const loadStore = async () => {

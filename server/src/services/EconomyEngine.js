@@ -539,39 +539,17 @@ class EconomyEngine {
     // Pay employees
     const totalSalaries = store.employees.reduce((sum, e) => sum + e.salary, 0);
 
-    // Auto-restock: employees refill shelves from warehouse
+    // Auto-restock: employees refill shelves from warehouse (lightweight)
     let restockedCount = 0;
-    
-    // If warehouse is empty, try to fill it first
-    const hasWarehouseStock = store.warehouse && store.warehouse.length > 0 && store.warehouse.some(w => w.quantity > 0);
-    if (!hasWarehouseStock) {
-      // Look up products to fill warehouse by category
-      const Product = require('../models/Product');
-      const products = await Product.find({ isActive: true });
-      for (const shelf of store.shelves) {
-        if (shelf.type === 'checkout') continue;
-        const catProducts = products.filter(p => p.category === shelf.category);
-        const picked = catProducts.sort(() => Math.random() - 0.5).slice(0, Math.min(3, catProducts.length));
-        for (const p of picked) {
-          const existing = store.warehouse.find(w => w.productId.toString() === p._id.toString());
-          if (!existing) {
-            store.warehouse.push({
-              productId: p._id,
-              quantity: Math.floor(Math.random() * 50) + 30,
-              minStock: 10,
-              purchasePrice: p.wholesalePrice
-            });
-          } else if (existing.quantity < existing.minStock) {
-            existing.quantity += Math.floor(Math.random() * 30) + 20;
-          }
-        }
-      }
-    }
+    const Product = require('../models/Product');
 
-    // Restock shelves from warehouse
     for (const shelf of store.shelves) {
       if (shelf.type === 'checkout') continue;
-      for (const warehouseItem of store.warehouse) {
+      
+      // Find warehouse items for this shelf's category using product lookup
+      const shelfWarehouseItems = store.warehouse.filter(w => w.quantity > 0);
+      
+      for (const warehouseItem of shelfWarehouseItems) {
         if (warehouseItem.quantity <= 0) continue;
         const shelfProduct = shelf.products.find(
           sp => sp.productId.toString() === warehouseItem.productId.toString()
@@ -579,22 +557,36 @@ class EconomyEngine {
         if (shelfProduct) {
           const spaceLeft = shelfProduct.maxCapacity - shelfProduct.quantity;
           if (spaceLeft > 0) {
-            const toAdd = Math.min(warehouseItem.quantity, spaceLeft);
+            const toAdd = Math.min(warehouseItem.quantity, spaceLeft, 10);
             shelfProduct.quantity += toAdd;
             warehouseItem.quantity -= toAdd;
             restockedCount += toAdd;
           }
         } else {
-          // Add new product to shelf from warehouse
           shelf.products.push({
             productId: warehouseItem.productId,
-            quantity: Math.min(warehouseItem.quantity, 20),
+            quantity: Math.min(warehouseItem.quantity, 10),
             maxCapacity: 50,
             price: Math.round(warehouseItem.purchasePrice * 1.3 * 100) / 100
           });
-          const added = Math.min(warehouseItem.quantity, 20);
+          const added = Math.min(warehouseItem.quantity, 10);
           warehouseItem.quantity -= added;
           restockedCount += added;
+        }
+      }
+      
+      // If shelf still has few products, fill warehouse with category products
+      if (shelf.products.length < 2) {
+        const catProducts = await Product.find({ category: shelf.category, isActive: true }).select('_id wholesalePrice').limit(5);
+        for (const p of catProducts) {
+          if (!store.warehouse.find(w => w.productId.toString() === p._id.toString())) {
+            store.warehouse.push({
+              productId: p._id,
+              quantity: 50 + Math.floor(Math.random() * 30),
+              minStock: 10,
+              purchasePrice: p.wholesalePrice
+            });
+          }
         }
       }
     }
