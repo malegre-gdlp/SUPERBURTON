@@ -12,6 +12,7 @@ import Catalog from './components/Catalog'
 import Market from './components/Market'
 import WhiteLabel from './components/WhiteLabel'
 import Franchises from './components/Franchises'
+import Community from './components/Community'
 import './styles/global.css'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -45,6 +46,7 @@ export default function App() {
         <Route path="/franchises" element={
           <ProtectedRoute><Franchises /></ProtectedRoute>
         } />
+        <Route path="/community" element={<Community />} />
       </Routes>
     </>
   )

@@ -4,6 +4,32 @@ import { catalogApi, economyApi } from '../api'
 import type { Product, PriceRange } from '../types'
 import './WhiteLabel.css'
 
+/* ── Helper: spawn confetti ── */
+function popConfetti(count = 6) {
+  const colors = ['#4CAF50','#FF9800','#2196F3','#F44336','#9C27B0','#FFD700']
+  for (let i = 0; i < count; i++) {
+    const el = document.createElement('div')
+    el.className = 'confetti-piece'
+    el.style.left = (20 + Math.random() * 60) + '%'
+    el.style.top = (20 + Math.random() * 40) + '%'
+    el.style.background = colors[Math.floor(Math.random() * colors.length)]
+    el.style.animationDelay = (Math.random() * 0.3) + 's'
+    el.style.width = (4 + Math.random() * 8) + 'px'
+    el.style.height = (4 + Math.random() * 8) + 'px'
+    document.body.appendChild(el)
+    setTimeout(() => el.remove(), 1600)
+  }
+}
+
+const packageShapes = [
+  { id: 'box', label: '📦 Caja', icon: '📦' },
+  { id: 'bottle', label: '🍾 Botella', icon: '🍾' },
+  { id: 'bag', label: '🛍️ Bolsa', icon: '🛍️' },
+  { id: 'can', label: '🥫 Lata', icon: '🥫' },
+  { id: 'jar', label: '🫙 Tarro', icon: '🫙' },
+  { id: 'pouch', label: '🧃 Bolsita', icon: '🧃' },
+]
+
 export default function WhiteLabel() {
   const { state, notify } = useGame()
   const storeLevel = state.stores?.length > 0
@@ -19,7 +45,11 @@ export default function WhiteLabel() {
     quality: 50,
     rarity: 10,
     manufacturingCost: 1.0,
-    demandFactor: 1.0
+    demandFactor: 1.0,
+    primaryColor: '#4CAF50',
+    secondaryColor: '#FF9800',
+    packageShape: 'box',
+    logoStyle: 'modern'
   })
   const [priceRange, setPriceRange] = useState<PriceRange | null>(null)
   const [proposedPrice, setProposedPrice] = useState(0)
@@ -98,14 +128,18 @@ export default function WhiteLabel() {
         name: form.name,
         description: form.description,
         category: form.category,
-        brandName: form.brandName
+        brandName: form.brandName,
+        imageUrl: `${form.primaryColor}|${form.secondaryColor}|${form.packageShape}`
       })
-      notify('success', 'Producto enviado para revisión. Será revisado pronto.')
+      notify('success', `🎉 ¡${form.brandName} — ${form.name} enviado para revisión!`)
+      popConfetti(10)
       setShowCreate(false)
       setForm({
         name: '', description: '', category: 'alimentacion',
         brandName: '', quality: 50, rarity: 10,
-        manufacturingCost: 1.0, demandFactor: 1.0
+        manufacturingCost: 1.0, demandFactor: 1.0,
+        primaryColor: '#4CAF50', secondaryColor: '#FF9800',
+        packageShape: 'box', logoStyle: 'modern'
       })
     } catch (err: any) {
       notify('error', err.response?.data?.error || 'Error al crear producto')
@@ -237,7 +271,51 @@ export default function WhiteLabel() {
                   </div>
 
                   <div className="wl-form-section">
-                    <h4>Atributos del producto</h4>
+                    <h4>🎨 Diseño del empaque</h4>
+                    {/* Live preview */}
+                    <div className="wl-preview" style={{background:form.primaryColor, borderColor:form.secondaryColor}}>
+                      <div className="wl-preview-shape">
+                        {packageShapes.find(s => s.id === form.packageShape)?.icon || '📦'}
+                      </div>
+                      <div className="wl-preview-info">
+                        <span className="wl-preview-brand" style={{color:'#fff'}}>{form.brandName || 'MARCA'}</span>
+                        <span className="wl-preview-name" style={{color:'rgba(255,255,255,.8)'}}>{form.name || 'Producto'}</span>
+                      </div>
+                      <div className="wl-preview-accent" style={{background:form.secondaryColor}}/>
+                    </div>
+                    <div className="form-group">
+                      <label>Color principal</label>
+                      <div className="wl-color-row">
+                        <input type="color" value={form.primaryColor} onChange={e => setForm({...form, primaryColor: e.target.value})}
+                          style={{width:50,height:40,padding:2,borderRadius:8,cursor:'pointer'}}/>
+                        <span className="wl-color-hex">{form.primaryColor}</span>
+                      </div>
+                    </div>
+                    <div className="form-group">
+                      <label>Color secundario</label>
+                      <div className="wl-color-row">
+                        <input type="color" value={form.secondaryColor} onChange={e => setForm({...form, secondaryColor: e.target.value})}
+                          style={{width:50,height:40,padding:2,borderRadius:8,cursor:'pointer'}}/>
+                        <span className="wl-color-hex">{form.secondaryColor}</span>
+                      </div>
+                    </div>
+                    <div className="form-group">
+                      <label>Tipo de empaque</label>
+                      <div className="wl-shape-grid">
+                        {packageShapes.map(ps => (
+                          <button key={ps.id} type="button"
+                            className={`wl-shape-btn ${form.packageShape === ps.id ? 'active' : ''}`}
+                            onClick={() => setForm({...form, packageShape: ps.id})}
+                          >
+                            {ps.icon}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="wl-form-section">
+                    <h4>📊 Atributos del producto</h4>
                     <div className="form-group">
                       <label>Calidad (1-100): {form.quality}</label>
                       <input

@@ -70,6 +70,12 @@
   padding: 4px 12px;
   background: var(--color-bg);
   border-radius: var(--radius-md);
+  transition: var(--transition);
+}
+
+.nav-user:hover {
+  background: var(--color-surface-hover);
+  box-shadow: var(--shadow-sm);
 }
 
 .nav-user-info {
@@ -96,6 +102,38 @@
 .nav-money {
   color: var(--color-secondary);
   font-weight: 700;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.nav-game-day {
+  padding: 4px 10px;
+  background: linear-gradient(135deg, var(--color-accent), #1565C0);
+  color: white;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+
+/* Navbar mobile */
+@media (max-width: 768px) {
+  .navbar-links {
+    gap: 4px;
+  }
+  .nav-link {
+    padding: 6px 8px;
+    font-size: 0.8rem;
+  }
+  .brand-text {
+    font-size: 1.1rem;
+  }
+  .nav-user-info {
+    gap: 4px;
+    font-size: 0.75rem;
+  }
+  .nav-user {
+    padding: 4px 8px;
+  }
 }
 
 .nav-auth {

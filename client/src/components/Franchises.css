@@ -148,6 +148,229 @@
   margin-bottom: 8px;
 }
 
+/* ── Current Tier ── */
+.current-tier-display {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px;
+  border: 2px solid;
+  border-radius: var(--radius-md);
+  background: var(--color-bg);
+  margin-bottom: 14px;
+}
+
+.current-tier-icon {
+  font-size: 36px;
+}
+
+.current-tier-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.current-tier-name {
+  font-weight: 800;
+  font-size: 18px;
+}
+
+.current-tier-rev {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+/* Tier progress dots */
+.tier-progress-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+}
+
+.tier-dot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px;
+  border: 2px solid;
+  border-radius: var(--radius-sm);
+  flex: 1;
+  text-align: center;
+  font-size: 20px;
+  opacity: 0.5;
+  transition: all .2s;
+}
+
+.tier-dot.unlocked {
+  opacity: 1;
+  background: var(--color-bg);
+}
+
+.tier-dot-label {
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+/* Franchise stores list */
+.franchise-stores-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.fs-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  background: var(--color-bg);
+  border-radius: var(--radius-sm);
+  transition: all .15s;
+}
+
+.fs-item:hover {
+  transform: translateX(4px);
+}
+
+.fs-name {
+  flex: 1;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.fs-district {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+.fs-rating {
+  font-size: 13px;
+  font-weight: 600;
+  min-width: 40px;
+}
+
+.fs-revenue {
+  font-size: 12px;
+  color: var(--color-secondary);
+  font-weight: 600;
+  min-width: 60px;
+  text-align: right;
+}
+
+/* Network visualization */
+.franchise-network {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  flex-wrap: wrap;
+  padding: 16px 0;
+  overflow-x: auto;
+}
+
+.network-node {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 16px;
+  background: var(--color-card);
+  border: 2px solid var(--color-primary);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all .2s;
+  min-width: 100px;
+}
+
+.network-node:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-md);
+}
+
+.network-node-icon {
+  font-size: 28px;
+}
+
+.network-node-name {
+  font-weight: 700;
+  font-size: 13px;
+  text-align: center;
+}
+
+.network-node-detail {
+  font-size: 10px;
+  color: var(--color-text-light);
+}
+
+.network-node-rev {
+  font-size: 12px;
+  color: var(--color-primary);
+  font-weight: 700;
+}
+
+.network-connector {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0 8px;
+}
+
+.network-line {
+  width: 2px;
+  height: 20px;
+  background: var(--color-primary);
+}
+
+.network-arrow {
+  font-size: 18px;
+  color: var(--color-primary);
+}
+
+/* ── License Cards ── */
+.license-card {
+  text-align: center;
+  padding: 24px 16px;
+  transition: all .2s;
+}
+
+.license-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-lg);
+}
+
+.license-icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+}
+
+.license-name {
+  font-size: 18px;
+  margin-bottom: 8px;
+}
+
+.license-price {
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--color-primary);
+  margin-bottom: 4px;
+}
+
+.license-duration {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  margin-bottom: 12px;
+}
+
+.license-desc {
+  font-size: 14px;
+  color: var(--color-text-secondary);
+  margin-bottom: 16px;
+  line-height: 1.5;
+}
+
 .franchise-action p {
   color: var(--color-text-secondary);
   margin-bottom: 16px;

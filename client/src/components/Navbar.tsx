@@ -1,14 +1,25 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useGame } from '../engine/GameContext'
+import { gameApi } from '../api'
 import './Navbar.css'
 
 export default function Navbar() {
   const { state, logout } = useGame()
   const navigate = useNavigate()
+  const [gameDay, setGameDay] = useState(1)
   const maxStoreLevel = state.stores?.length > 0 
-    ? Math.max(...state.stores.map(s => (s as any).level || 1))
+    ? Math.max(...state.stores.map((s: any) => (s as any).level || 1))
     : state.user?.level || 1
+
+  useEffect(() => {
+    const loadDay = async () => {
+      try { const { data } = await gameApi.getState(); setGameDay(data.day) } catch {}
+    }
+    loadDay()
+    const iv = setInterval(loadDay, 30000)
+    return () => clearInterval(iv)
+  }, [])
 
   const handleLogout = () => {
     logout()
@@ -24,14 +35,18 @@ export default function Navbar() {
         </Link>
 
         <div className="navbar-links">
-          <Link to="/catalog" className="nav-link">Catálogo</Link>
-          <Link to="/market" className="nav-link">Mercado</Link>
+          <Link to="/catalog" className="nav-link">📦 Catálogo</Link>
+          <Link to="/market" className="nav-link">📊 Mercado</Link>
+          <Link to="/community" className="nav-link">🌍 Comunidad</Link>
 
           {state.user ? (
             <>
               <Link to="/dashboard" className="nav-link">Mi Tienda</Link>
               {maxStoreLevel >= 5 && <Link to="/white-label" className="nav-link">🏷️ Marca Blanca</Link>}
               {maxStoreLevel >= 10 && <Link to="/franchises" className="nav-link">🏢 Franquicias</Link>}
+              <span className="nav-game-day" title="Día de juego global">
+                📅 D{gameDay}
+              </span>
               <div className="nav-user">
                 <div className="nav-user-info">
                   <span className="nav-level">Nv.{state.user.level}</span>

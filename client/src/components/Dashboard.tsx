@@ -1,20 +1,80 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useGame } from '../engine/GameContext'
-import { storeApi, economyApi, catalogApi } from '../api'
+import { storeApi, economyApi, gameApi } from '../api'
 import type { Store, DistrictType } from '../types'
 import './Dashboard.css'
 
+/* ── Helper: spawn floating coin text ── */
+function spawnFloatingText(text: string, className = 'floating-text coins') {
+  const el = document.createElement('div')
+  el.className = className
+  el.textContent = text
+  el.style.left = (40 + Math.random() * 40) + '%'
+  el.style.top = (30 + Math.random() * 30) + '%'
+  el.style.fontSize = (20 + Math.random() * 12) + 'px'
+  document.body.appendChild(el)
+  setTimeout(() => el.remove(), 1800)
+}
+
+/* ── Helper: spawn confetti pieces ── */
+function spawnConfetti(count = 8) {
+  const colors = ['#4CAF50', '#FF9800', '#2196F3', '#F44336', '#9C27B0', '#FFD700']
+  for (let i = 0; i < count; i++) {
+    const el = document.createElement('div')
+    el.className = 'confetti-piece'
+    el.style.left = (20 + Math.random() * 60) + '%'
+    el.style.top = (20 + Math.random() * 40) + '%'
+    el.style.background = colors[Math.floor(Math.random() * colors.length)]
+    el.style.animationDelay = (Math.random() * 0.3) + 's'
+    el.style.width = (4 + Math.random() * 8) + 'px'
+    el.style.height = (4 + Math.random() * 8) + 'px'
+    document.body.appendChild(el)
+    setTimeout(() => el.remove(), 1600)
+  }
+}
+
 export default function Dashboard() {
-  const { state, dispatch, loadStores, selectStore, notify } = useGame()
+  const { state, dispatch, loadStores, notify } = useGame()
   const navigate = useNavigate()
   const [showCreate, setShowCreate] = useState(false)
   const [newStore, setNewStore] = useState({ name: '', description: '', districtType: 'barrio' as DistrictType })
   const [creating, setCreating] = useState(false)
+  const [ranking, setRanking] = useState<any[]>([])
+  const [topPlayers, setTopPlayers] = useState<any[]>([])
+  const [autoTicking, setAutoTicking] = useState(false)
+  const tickRef = useRef(false)
 
   useEffect(() => {
-    if (state.user) loadStores()
+    if (state.user) { loadStores(); loadRanking() }
   }, [state.user, loadStores])
+
+  /* Auto global tick every 60s */
+  useEffect(() => {
+    const iv = setInterval(async () => {
+      if (tickRef.current) return
+      tickRef.current = true
+      try {
+        const { data } = await gameApi.globalTick()
+        if (data?.storeResults?.length > 0) {
+          spawnConfetti(5)
+          notify('info', `🌍 Tick global — Día ${data.day}: ${data.storesProcessed} tiendas, ${data.totalRevenue.toFixed(0)}€ facturados`)
+          loadStores()
+          loadRanking()
+        }
+      } catch { /* silent */ }
+      finally { tickRef.current = false }
+    }, 60000)
+    return () => clearInterval(iv)
+  }, [loadStores, notify])
+
+  const loadRanking = useCallback(async () => {
+    try {
+      const { data } = await gameApi.getRanking()
+      setRanking(data.ranking?.slice(0, 5) || [])
+      setTopPlayers(data.topPlayers?.slice(0, 5) || [])
+    } catch { /* ignore */ }
+  }, [])
 
   const handleCreateStore = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -24,7 +84,8 @@ export default function Dashboard() {
       const { data } = await storeApi.create(newStore)
       dispatch({ type: 'SET_STORES', payload: [...state.stores, data.store] })
       dispatch({ type: 'UPDATE_STORE', payload: data.store })
-      notify('success', `¡${data.store.name} creado!`)
+      notify('success', `🎉 ¡${data.store.name} creado!`)
+      spawnConfetti(12)
       setShowCreate(false)
       setNewStore({ name: '', description: '', districtType: 'barrio' })
       navigate(`/store/${data.store._id}`)
@@ -39,15 +100,39 @@ export default function Dashboard() {
     try {
       const { data } = await economyApi.tickStore(storeId)
       const result = data.result
-      notify('info',
-        `🛒 ${result.customers} clientes | 💰 ${result.totalRevenue.toFixed(2)}€ ingresos` +
-        (result.rejectedPurchases.length > 0 ? ` | ⚠️ ${result.rejectedPurchases.length} compras rechazadas` : '')
+      spawnFloatingText(`+${result.totalRevenue.toFixed(0)}€ 💰`)
+      if (result.totalProfit > 50) spawnConfetti(4)
+      notify('success',
+        `🛒 ${result.customers} clientes | 💰 +${result.totalRevenue.toFixed(2)}€ ingresos | 📈 +${result.totalProfit.toFixed(2)}€ ganancia` +
+        (result.rejectedPurchases.length > 0 ? ` | ⚠️ ${result.rejectedPurchases.length} rechazos` : '')
       )
-      // Reload store
       const storeRes = await storeApi.getById(storeId)
       dispatch({ type: 'UPDATE_STORE', payload: storeRes.data.store })
+      loadRanking()
     } catch (err: any) {
       notify('error', err.response?.data?.error || 'Error al procesar')
+    }
+  }
+
+  const handleGlobalTick = async () => {
+    setAutoTicking(true)
+    try {
+      const { data } = await gameApi.globalTick()
+      if (data?.storeResults?.length > 0) {
+        spawnConfetti(10)
+        notify('success', `🌍 Tick global completado — Día ${data.day}`)
+        data.storeResults.forEach((r: any) => {
+          if (r.profit > 0) spawnFloatingText(`+${r.profit.toFixed(0)}€ ${r.storeName}`, 'floating-text coins')
+        })
+      } else {
+        notify('info', '🌍 No hay tiendas abiertas para procesar')
+      }
+      loadStores()
+      loadRanking()
+    } catch (err: any) {
+      notify('error', err.response?.data?.error || 'Error en tick global')
+    } finally {
+      setAutoTicking(false)
     }
   }
 
@@ -67,6 +152,17 @@ export default function Dashboard() {
             <p className="text-secondary">
               Nivel {state.user?.level} • 💰 {state.user?.money.toFixed(2)} €
             </p>
+            {/* User XP Bar */}
+            <div className="user-xp-bar">
+              <div className="user-xp-track">
+                <div className="user-xp-fill" style={{
+                  width: state.user ? Math.min(100, ((state.user.experience || 0) / (state.user.experienceToNextLevel || 500)) * 100) + '%' : '0%'
+                }} />
+              </div>
+              <span className="user-xp-text">
+                {state.user?.experience || 0} / {state.user?.experienceToNextLevel || 500} XP
+              </span>
+            </div>
           </div>
           <button className="btn btn-primary" onClick={() => setShowCreate(true)}>
             + Nueva Tienda
@@ -214,6 +310,87 @@ export default function Dashboard() {
         )}
 
         {/* Create Store Modal */}
+        {/* ═══ RANKING / COMMUNITY SECTION ═══ */}
+        {state.stores.length > 0 && (
+          <div className="dashboard-community">
+            <div className="dashboard-community-header">
+              <h3>🌍 Comunidad</h3>
+              <button className="btn btn-ghost btn-sm" onClick={() => navigate('/community')}>
+                Ver todo →
+              </button>
+            </div>
+            <div className="grid grid-2">
+              {/* Mini Ranking */}
+              <div className="card mini-ranking">
+                <h4>🏪 Top Tiendas</h4>
+                {ranking.length === 0 ? (
+                  <p className="text-secondary" style={{ fontSize: 13 }}>Cargando ranking...</p>
+                ) : (
+                  <div className="mini-ranking-list">
+                    {ranking.map((s: any, i: number) => (
+                      <div key={i} className="mini-ranking-row">
+                        <span className="mini-rank-num" style={{
+                          color: i === 0 ? '#FFD700' : i === 1 ? '#C0C0C0' : i === 2 ? '#CD7F32' : 'var(--color-text-light)'
+                        }}>
+                          {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i + 1}`}
+                        </span>
+                        <div className="mini-rank-info">
+                          <span className="mini-rank-name">{s.storeName}</span>
+                          <span className="mini-rank-owner">👤 {s.ownerName}</span>
+                        </div>
+                        <div className="mini-rank-revenue">
+                          <span className="mini-rank-val">{s.revenue.toFixed(0)}€</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <button className="btn btn-outline btn-sm" style={{ width: '100%', marginTop: 8 }} onClick={() => navigate('/community')}>
+                  🌍 Ir a la comunidad
+                </button>
+              </div>
+
+              {/* Mini Players */}
+              <div className="card mini-players">
+                <h4>👥 Top Jugadores</h4>
+                {topPlayers.length === 0 ? (
+                  <p className="text-secondary" style={{ fontSize: 13 }}>Cargando jugadores...</p>
+                ) : (
+                  <div className="mini-players-list">
+                    {topPlayers.map((p: any, i: number) => (
+                      <div key={i} className="mini-player-row">
+                        <span className="mini-player-avatar" style={{
+                          background: `linear-gradient(135deg, hsl(${p.username.length * 40}, 70%, 60%), hsl(${p.username.length * 40 + 60}, 70%, 50%))`
+                        }}>
+                          {p.username.charAt(0).toUpperCase()}
+                        </span>
+                        <div className="mini-player-info">
+                          <span className="mini-player-name">{p.username}</span>
+                          <span className="mini-player-level">Nv.{p.level}</span>
+                        </div>
+                        <span className="mini-player-money">💰 {p.money.toFixed(0)}€</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Quick actions row */}
+            <div className="quick-actions-row">
+              <button className="btn btn-primary" onClick={handleGlobalTick} disabled={autoTicking}>
+                {autoTicking ? '⏳ Procesando...' : '🌍 Tick Global'}
+              </button>
+              <button className="btn btn-outline" onClick={() => navigate('/catalog')}>
+                📦 Catálogo
+              </button>
+              <button className="btn btn-outline" onClick={() => navigate('/market')}>
+                📊 Mercado
+              </button>
+            </div>
+          </div>
+        )}
+
         {showCreate && (
           <div className="modal-overlay" onClick={() => setShowCreate(false)}>
             <div className="modal card" onClick={e => e.stopPropagation()}>

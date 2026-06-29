@@ -53,6 +53,8 @@ export const storeApi = {
     api.delete(`/stores/${id}/employees/${index}`),
   addToWarehouse: (id: string, data: { productId: string; quantity: number; purchasePrice: number }) =>
     api.post(`/stores/${id}/warehouse`, data),
+  moveToShelf: (id: string, data: { warehouseItemIndex: number; shelfIndex: number; quantity: number }) =>
+    api.post<{ store: Store }>(`/stores/${id}/warehouse/move-to-shelf`, data),
   restock: (id: string) =>
     api.post<{ restocked: number; warehouse: any[]; shelves: any[] }>(`/stores/${id}/restock`)
 }

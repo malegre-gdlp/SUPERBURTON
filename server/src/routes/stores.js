@@ -318,6 +318,66 @@ router.post('/:id/warehouse', auth, async (req, res) => {
   }
 });
 
+// Move specific quantity from warehouse to a specific shelf
+router.post('/:id/warehouse/move-to-shelf', auth, async (req, res) => {
+  try {
+    const store = await Store.findOne({ _id: req.params.id, owner: req.user._id });
+    if (!store) {
+      return res.status(404).json({ error: 'Store not found' });
+    }
+
+    const { warehouseItemIndex, shelfIndex, quantity } = req.body;
+
+    if (warehouseItemIndex < 0 || warehouseItemIndex >= store.warehouse.length) {
+      return res.status(400).json({ error: 'Warehouse item not found' });
+    }
+    if (shelfIndex < 0 || shelfIndex >= store.shelves.length) {
+      return res.status(400).json({ error: 'Shelf not found' });
+    }
+
+    const wItem = store.warehouse[warehouseItemIndex];
+    const shelf = store.shelves[shelfIndex];
+    const moveQty = Math.min(quantity || wItem.quantity, wItem.quantity);
+
+    if (moveQty <= 0) {
+      return res.status(400).json({ error: 'Quantity must be positive' });
+    }
+
+    // Find or create product on shelf
+    const existing = shelf.products.find(
+      sp => sp.productId.toString() === wItem.productId.toString()
+    );
+
+    if (existing) {
+      const spaceLeft = existing.maxCapacity - existing.quantity;
+      const toAdd = Math.min(moveQty, spaceLeft);
+      if (toAdd <= 0) {
+        return res.status(400).json({ error: 'Shelf is full' });
+      }
+      existing.quantity += toAdd;
+      wItem.quantity -= toAdd;
+    } else {
+      const maxCap = 50;
+      const toAdd = Math.min(moveQty, maxCap);
+      shelf.products.push({
+        productId: wItem.productId,
+        quantity: toAdd,
+        maxCapacity: maxCap,
+        price: Math.round(wItem.purchasePrice * 1.3 * 100) / 100
+      });
+      wItem.quantity -= toAdd;
+    }
+
+    // Clean up zero-quantity warehouse items
+    store.warehouse = store.warehouse.filter(w => w.quantity > 0);
+
+    await store.save();
+    res.json({ store });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
 // Open/close store
 router.patch('/:id/toggle', auth, async (req, res) => {
   try {

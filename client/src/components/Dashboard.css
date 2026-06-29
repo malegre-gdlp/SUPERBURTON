@@ -1,7 +1,7 @@
 .dashboard-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   margin-bottom: 24px;
 }
 
@@ -11,6 +11,37 @@
 
 .text-secondary {
   color: var(--color-text-secondary);
+}
+
+/* User XP bar in header */
+.user-xp-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.user-xp-track {
+  flex: 1;
+  max-width: 200px;
+  height: 6px;
+  background: var(--color-border);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.user-xp-fill {
+  height: 100%;
+  border-radius: 3px;
+  background: linear-gradient(90deg, #4CAF50, #8BC34A, #CDDC39);
+  transition: width .5s ease;
+}
+
+.user-xp-text {
+  font-size: 11px;
+  color: var(--color-text-light);
+  font-weight: 600;
+  white-space: nowrap;
 }
 
 /* Market Status */
@@ -261,3 +292,176 @@
 .text-warning { color: var(--color-warning); font-weight: 600; }
 .btn-success { background: var(--color-success); color: white; }
 .btn-success:hover { background: #388E3C; }
+
+/* ═══ Dashboard Community Section ═══ */
+.dashboard-community {
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 2px solid var(--color-border);
+}
+
+.dashboard-community-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.dashboard-community-header h3 {
+  margin: 0;
+  font-size: 18px;
+}
+
+/* Mini Ranking */
+.mini-ranking h4, .mini-players h4 {
+  margin: 0 0 10px 0;
+  font-size: 14px;
+}
+
+.mini-ranking-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.mini-ranking-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  background: var(--color-bg);
+  border-radius: 4px;
+  font-size: 13px;
+  transition: all .15s;
+}
+
+.mini-ranking-row:hover {
+  transform: translateX(3px);
+}
+
+.mini-rank-num {
+  min-width: 28px;
+  text-align: center;
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.mini-rank-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.mini-rank-name {
+  font-weight: 600;
+  font-size: 12px;
+}
+
+.mini-rank-owner {
+  font-size: 10px;
+  color: var(--color-text-light);
+}
+
+.mini-rank-revenue {
+  text-align: right;
+}
+
+.mini-rank-val {
+  font-weight: 700;
+  color: var(--color-primary);
+  font-size: 13px;
+}
+
+/* Mini Players */
+.mini-players-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.mini-player-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  background: var(--color-bg);
+  border-radius: 4px;
+  transition: all .15s;
+}
+
+.mini-player-row:hover {
+  transform: translateX(3px);
+}
+
+.mini-player-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-weight: 700;
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+.mini-player-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.mini-player-name {
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.mini-player-level {
+  font-size: 10px;
+  color: var(--color-text-light);
+}
+
+.mini-player-money {
+  font-weight: 700;
+  color: var(--color-secondary);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+/* Quick Actions */
+.quick-actions-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+  flex-wrap: wrap;
+}
+
+/* Store card XP bar enhancement */
+.store-xp-mini {
+  margin-top: 8px;
+}
+
+.store-xp-mini .xp-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  color: var(--color-text-light);
+  margin-bottom: 3px;
+}
+
+.store-xp-mini .xp-track {
+  height: 4px;
+  background: var(--color-border);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.store-xp-mini .xp-fill {
+  height: 100%;
+  border-radius: 2px;
+  background: linear-gradient(90deg, #4CAF50, #8BC34A);
+  transition: width .5s ease;
+}

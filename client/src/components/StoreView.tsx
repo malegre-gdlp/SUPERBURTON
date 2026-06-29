@@ -5,6 +5,35 @@ import { storeApi, catalogApi, economyApi, authApi, gameApi } from '../api'
 import type { Store, Product } from '../types'
 import './StoreView.css'
 
+/* ── Helper: spawn floating text ── */
+function spawnFloat(text: string, cls = 'floating-text coins') {
+  const el = document.createElement('div')
+  el.className = cls
+  el.textContent = text
+  el.style.left = (30 + Math.random() * 40) + '%'
+  el.style.top = (25 + Math.random() * 25) + '%'
+  el.style.fontSize = (18 + Math.random() * 14) + 'px'
+  document.body.appendChild(el)
+  setTimeout(() => el.remove(), 1800)
+}
+
+/* ── Helper: confetti ── */
+function popConfetti(count = 6) {
+  const colors = ['#4CAF50','#FF9800','#2196F3','#F44336','#9C27B0','#FFD700']
+  for (let i = 0; i < count; i++) {
+    const el = document.createElement('div')
+    el.className = 'confetti-piece'
+    el.style.left = (20 + Math.random() * 60) + '%'
+    el.style.top = (20 + Math.random() * 40) + '%'
+    el.style.background = colors[Math.floor(Math.random() * colors.length)]
+    el.style.animationDelay = (Math.random() * 0.3) + 's'
+    el.style.width = (4 + Math.random() * 8) + 'px'
+    el.style.height = (4 + Math.random() * 8) + 'px'
+    document.body.appendChild(el)
+    setTimeout(() => el.remove(), 1600)
+  }
+}
+
 const C: Record<string,string> = { alimentacion:'#4CAF50',bebidas:'#2196F3',limpieza:'#FF9800',mascotas:'#9C27B0',electronica:'#00BCD4',jardineria:'#8BC34A',farmacia:'#F44336',moda:'#E91E63',juguetes:'#FF5722' }
 const I: Record<string,string> = { alimentacion:'🍎',bebidas:'🥤',limpieza:'🧹',mascotas:'🐾',electronica:'💻',jardineria:'🌿',farmacia:'💊',moda:'👕',juguetes:'🎮' }
 const D: Record<string,string> = { barrio:'🏘️',ciudad:'🏙️',centro_comercial:'🏬',zona_exclusiva:'🌴' }
@@ -21,6 +50,7 @@ export default function StoreView() {
   const [cust, setCust] = useState<any[]>([])
   const [showBuy, setShowBuy] = useState(false)
   const [buyQty, setBuyQty] = useState(10)
+  const [animTick, setAnimTick] = useState(false)
   const tickRef = useRef(false)
 
   useEffect(() => { loadStore(); loadCat(); loadDay() }, [id])
@@ -35,6 +65,9 @@ export default function StoreView() {
         const { data } = await economyApi.tickStore(s._id)
         if (data?.result) {
           setTr(data.result)
+          setAnimTick(true); setTimeout(() => setAnimTick(false), 1000)
+          if (data.result.totalProfit > 0) spawnFloat(`+${data.result.totalProfit.toFixed(0)}€ 📈`)
+          if (data.result.customers > 5) popConfetti(3)
           setCust(Array.from({length:Math.min(data.result.customers||0,15)}, (_,i) => ({id:i,x:Math.random()*80+10,y:Math.random()*70+15})))
           setTimeout(() => setCust([]), 4000)
         }
@@ -65,7 +98,10 @@ export default function StoreView() {
       const { data } = await economyApi.tickStore(s._id)
       if (data?.result) {
         setTr(data.result)
-        notify('success',`🛒 ${data.result.customers} clientes | 💰 ${data.result.totalRevenue.toFixed(2)}€`)
+        setAnimTick(true); setTimeout(() => setAnimTick(false), 1000)
+        if (data.result.totalProfit > 0) spawnFloat(`+${data.result.totalProfit.toFixed(0)}€ 📈`)
+        if (data.result.customers > 3) popConfetti(4)
+        notify('success',`🛒 ${data.result.customers} clientes | 💰 +${data.result.totalRevenue.toFixed(2)}€ | 📈 +${data.result.totalProfit.toFixed(2)}€ ganancia`)
         setCust(Array.from({length:Math.min(data.result.customers||0,15)}, (_,i) => ({id:i,x:Math.random()*80+10,y:Math.random()*70+15})))
         setTimeout(() => setCust([]), 4000)
       }
@@ -129,8 +165,43 @@ export default function StoreView() {
     catch { notify('error','Error') }
   }
 
-  const handleDrop = (ti:number) => {
-    /* no-op, shelf reordering not persisted */
+  /* ── Drag & Drop Warehouse → Shelf ── */
+  const [dragItem, setDragItem] = useState<{idx:number} | null>(null)
+  const [dropTarget, setDropTarget] = useState<number | null>(null)
+
+  const handleDragStart = (idx: number) => {
+    setDragItem({ idx })
+  }
+
+  const handleShelfDragOver = (e: React.DragEvent, si: number) => {
+    e.preventDefault()
+    setDropTarget(si)
+  }
+
+  const handleShelfDrop = async (si: number) => {
+    setDropTarget(null)
+    if (dragItem === null || !s) return
+    const wi = dragItem.idx
+    const wItem = s.warehouse[wi]
+    if (!wItem) { setDragItem(null); return }
+    try {
+      const { data } = await storeApi.moveToShelf(s._id, {
+        warehouseItemIndex: wi,
+        shelfIndex: si,
+        quantity: Math.min(wItem.quantity, 25)
+      })
+      notify('success', `📦 Movido a estantería`)
+      spawnFloat(`+${Math.min(wItem.quantity, 25)} uds`, 'floating-text xp')
+      loadStore()
+    } catch (e: any) {
+      notify('error', e?.response?.data?.error || 'Error al mover')
+    }
+    setDragItem(null)
+  }
+
+  /* ── Shelf → Shelf drag reorder (local only) ── */
+  const handleShelfDragStart = (i: number) => {
+    setDragItem({ idx: i })
   }
 
   if (!s) return <div className="page"><div className="container" style={{textAlign:'center',padding:60}}>🔄 Cargando...</div></div>
@@ -146,7 +217,7 @@ export default function StoreView() {
 
       <div className="container">
         {/* header */}
-        <div className="store-header">
+        <div className={`store-header ${animTick ? 'cash-register' : ''}`}>
           <div>
             <button className="btn btn-ghost" onClick={() => nav('/dashboard')}>←</button>
             <div className="header-title-row"><h1>{s.name}</h1>
@@ -170,9 +241,15 @@ export default function StoreView() {
 
         {/* tabs */}
         <div className="store-tabs">
-          {['overview','layout','products','employees'].map(t => (
-            <button key={t} className={`tab-btn ${tab===t?'active':''}`} onClick={() => setTab(t)}>
-              {t==='overview'?'📊':t==='layout'?'🏗️':t==='products'?'📦':'👥'} {t}
+          {[
+            { key: 'overview', icon: '📊', label: 'Resumen' },
+            { key: 'layout', icon: '🏗️', label: 'Tienda' },
+            { key: 'products', icon: '📦', label: 'Productos' },
+            { key: 'warehouse', icon: '📦', label: 'Almacén' },
+            { key: 'employees', icon: '👥', label: 'Empleados' },
+          ].map(t => (
+            <button key={t.key} className={`tab-btn ${tab===t.key?'active':''}`} onClick={() => setTab(t.key)}>
+              {t.icon} {t.label}
             </button>
           ))}
         </div>
@@ -196,7 +273,7 @@ export default function StoreView() {
                 <span>{s.experience||0} XP</span>
               </div>
               <div style={{background:'var(--color-border)',borderRadius:4,height:6,overflow:'hidden'}}>
-                <div style={{background:'linear-gradient(90deg,#4CAF50,#8BC34A)',height:'100%',borderRadius:4,width:Math.min(100,((s.experience||0)%500)/500*100)+'%',transition:'width .5s'}}/>
+                <div className={s.experience > 0 && (s.experience % 500) > 450 ? 'xp-bar-glow' : ''} style={{background:'linear-gradient(90deg,#4CAF50,#8BC34A)',height:'100%',borderRadius:4,width:Math.min(100,((s.experience||0)%500)/500*100)+'%',transition:'width .5s'}}/>
               </div>
             </div>
           </div>
@@ -204,10 +281,59 @@ export default function StoreView() {
             <h3>📅 Día {day}</h3>
             <p>🏗️ {s.shelves.length} estanterías | 👥 {s.employees.length} empleados</p>
             <p>📦 {totStock} productos | 🏭 {s.warehouse?.length||0} en almacén</p>
-            {tr && <div style={{background:'var(--color-bg)',borderRadius:8,padding:10,marginTop:8}}>
-              <div>👥 {tr.customers} clientes | 🛒 {tr.totalSales} ventas</div>
-              <div>💰 {tr.totalRevenue.toFixed(2)}€ | 📈 {tr.totalProfit.toFixed(2)}€ ganancia</div>
+            {tr && <div className="tick-card">
+              <div className="tick-row"><span>👥 Clientes</span><span>{tr.customers}</span></div>
+              <div className="tick-row"><span>🛒 Ventas</span><span>{tr.totalSales}</span></div>
+              <div className="tick-row"><span>💰 Ingresos</span><span>{tr.totalRevenue.toFixed(2)}€</span></div>
+              <div className="tick-row" style={{fontWeight:700,color:'var(--color-primary)'}}><span>📈 Ganancia</span><span>+{tr.totalProfit.toFixed(2)}€</span></div>
             </div>}
+
+            {/* Satisfaction meters */}
+            <div style={{marginTop:12}}>
+              <div className="satisfaction-row">
+                <span className="sat-label">😊 Satisfacción</span>
+                <div className="sat-bar">
+                  <div className="sat-fill" style={{
+                    width: s.stats.customerSatisfaction + '%',
+                    background: s.stats.customerSatisfaction > 60 ? 'var(--color-success)' : s.stats.customerSatisfaction > 30 ? 'var(--color-warning)' : 'var(--color-danger)'
+                  }}/>
+                </div>
+                <span className="sat-value">{s.stats.customerSatisfaction.toFixed(0)}%</span>
+              </div>
+              <div className="satisfaction-row">
+                <span className="sat-label">🏷️ Precio justo</span>
+                <div className="sat-bar">
+                  <div className="sat-fill" style={{
+                    width: s.stats.priceFairnessReputation + '%',
+                    background: s.stats.priceFairnessReputation > 60 ? 'var(--color-success)' : s.stats.priceFairnessReputation > 30 ? 'var(--color-warning)' : 'var(--color-danger)'
+                  }}/>
+                </div>
+                <span className="sat-value">{s.stats.priceFairnessReputation.toFixed(0)}%</span>
+              </div>
+              <div className="satisfaction-row">
+                <span className="sat-label">❤️ Lealtad</span>
+                <div className="sat-bar">
+                  <div className="sat-fill" style={{
+                    width: Math.max(0, s.customerLoyalty + 50) + '%',
+                    background: s.customerLoyalty > 20 ? 'var(--color-success)' : s.customerLoyalty > -10 ? 'var(--color-warning)' : 'var(--color-danger)'
+                  }}/>
+                </div>
+                <span className="sat-value">{s.customerLoyalty?.toFixed(0) || 0}</span>
+              </div>
+            </div>
+
+            {/* Activity feed from tick */}
+            {tr?.rejectedPurchases?.length > 0 && (
+              <div className="activity-feed">
+                <h4>⚠️ Rechazos</h4>
+                {tr.rejectedPurchases.slice(0, 3).map((rp: any, i: number) => (
+                  <div key={i} className="activity-item">
+                    <span>❌ {rp.productName}</span>
+                    <span className="activity-time">{rp.reason}</span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>}
 
@@ -218,7 +344,7 @@ export default function StoreView() {
           </div>
           <div className="store-grid">
             {s.shelves.map((sh,i) => (
-              <div key={i} className="shelf-block" style={{borderColor:C[sh.category]||'#ccc'}} draggable onDragStart={()=>{}} onDragOver={e=>e.preventDefault()} onDrop={()=>handleDrop(i)}>
+              <div key={i} className="shelf-block" style={{borderColor:C[sh.category]||'#ccc'}} draggable onDragStart={()=>handleShelfDragStart(i)} onDragOver={e=>e.preventDefault()} onDrop={()=>{}}>
                 <div className="shelf-block-header" style={{background:C[sh.category]||'#ccc'}}>{I[sh.category]} {sh.category?.slice(0,4)}</div>
                 <div className="shelf-block-body">
                   <span className="shelf-block-count">{sh.products.reduce((t,p)=>t+p.quantity,0)}</span>
@@ -270,23 +396,203 @@ export default function StoreView() {
           {s.shelves.every(sh => sh.products.length === 0) && <div className="card"><p style={{textAlign:'center',color:'var(--color-text-secondary)',padding:20}}>📭 Sin productos. Haz click en 🛍️ Comprar.</p></div>}
         </div>}
 
-        {/* ═══ EMPLOYEES ═══ */}
-        {tab === 'employees' && <div className="card">
-          <div className="layout-header"><h3>👥 Empleados</h3>
-            <div style={{display:'flex',gap:4}}>
-              {['cashier','stockist','manager','cleaner','security'].map(r => (
-                <button key={r} className="btn btn-sm btn-primary" onClick={() => hire(r)}>+{r}</button>
+        {/* ═══ WAREHOUSE ═══ */}
+        {tab === 'warehouse' && <div className="grid grid-2">
+          {/* Warehouse inventory */}
+          <div className="card">
+            <div className="layout-header">
+              <h3>🏭 Almacén</h3>
+              <button className="btn btn-sm btn-primary" onClick={() => setShowBuy(true)}>🛍️ Comprar</button>
+            </div>
+            <p style={{fontSize:12,color:'var(--color-text-secondary)',marginBottom:10}}>
+              Arrastra productos al estante donde quieras colocarlos
+            </p>
+            {s.warehouse.length === 0 ? (
+              <div style={{textAlign:'center',padding:30,color:'var(--color-text-secondary)'}}>
+                <div style={{fontSize:48,marginBottom:12}}>📦</div>
+                <p>Almacén vacío. Compra productos del mercado mayorista.</p>
+              </div>
+            ) : (
+              <div className="warehouse-grid">
+                {s.warehouse.map((w, wi) => {
+                  const p = gp(w.productId)
+                  return (
+                    <div
+                      key={wi}
+                      className={`warehouse-item ${dragItem?.idx === wi ? 'dragging' : ''}`}
+                      draggable
+                      onDragStart={() => handleDragStart(wi)}
+                      style={{ borderLeft: `4px solid ${C[p?.category||'']||'#888'}` }}
+                    >
+                      <div className="warehouse-item-header">
+                        <span className="warehouse-item-icon">{I[p?.category||'']||'📦'}</span>
+                        <span className="warehouse-item-name">{p?.name || '?'}</span>
+                      </div>
+                      <div className="warehouse-item-details">
+                        <div className="warehouse-item-qty">
+                          <span className="wh-qty-num">{w.quantity}</span>
+                          <span className="wh-qty-label">uds</span>
+                        </div>
+                        <div className="warehouse-item-price">
+                          <span>{(w.purchasePrice||0).toFixed(2)}€</span>
+                        </div>
+                        <div className="warehouse-item-min">
+                          <span style={{fontSize:10,color:'var(--color-text-light)'}}>Min: {w.minStock||10}</span>
+                        </div>
+                      </div>
+                      <div className="warehouse-item-drag-hint">⋮⋮ Arrastrar</div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Shelf targets */}
+          <div className="card">
+            <div className="layout-header">
+              <h3>🏪 Estanterías</h3>
+              <button className="btn btn-sm btn-secondary" onClick={doRestock}>📦 Restock auto</button>
+            </div>
+            <p style={{fontSize:12,color:'var(--color-text-secondary)',marginBottom:10}}>
+              Suelta productos aquí para reabastecer
+            </p>
+            <div className="warehouse-shelf-list">
+              {s.shelves.map((sh, si) => (
+                <div
+                  key={si}
+                  className={`warehouse-shelf-target ${dropTarget === si ? 'drop-active' : ''}`}
+                  onDragOver={(e) => handleShelfDragOver(e, si)}
+                  onDragLeave={() => setDropTarget(null)}
+                  onDrop={() => handleShelfDrop(si)}
+                  style={{ borderColor: C[sh.category]||'#ccc' }}
+                >
+                  <div className="wst-header" style={{background:C[sh.category]||'#ccc'}}>
+                    {I[sh.category]} {sh.category}
+                    <span className="wst-type">{sh.type}</span>
+                  </div>
+                  <div className="wst-body">
+                    <span className="wst-count">
+                      {sh.products.reduce((t,p)=>t+p.quantity,0)} / {sh.products.reduce((t,p)=>t+p.maxCapacity,0) || 50}
+                    </span>
+                    <div className="wst-bar">
+                      <div className="wst-bar-fill" style={{
+                        width: Math.min(100, sh.products.reduce((t,p)=>t+p.quantity,0) / Math.max(1, sh.products.reduce((t,p)=>t+p.maxCapacity,0)) * 100) + '%',
+                        background: C[sh.category]||'#4CAF50'
+                      }}/>
+                    </div>
+                  </div>
+                  <div className="wst-products">
+                    {sh.products.slice(0, 3).map((sp, pi) => {
+                      const p = gp(sp.productId)
+                      return <span key={pi} className="wst-product-tag">{p?.name?.slice(0,12)||'?'} ×{sp.quantity}</span>
+                    })}
+                    {sh.products.length > 3 && <span className="wst-more">+{sh.products.length-3} más</span>}
+                  </div>
+                </div>
               ))}
             </div>
           </div>
-          {s.employees.map((e,i) => (
-            <div key={i} className="product-row" style={{display:'flex',alignItems:'center',gap:12,padding:'8px 12',background:'var(--color-bg)',borderRadius:6,marginBottom:4}}>
-              <div style={{flex:1}}><strong>{e.name}</strong><br/><span style={{fontSize:12,color:'var(--color-text-secondary)',textTransform:'capitalize'}}>{e.role}</span></div>
-              <div style={{fontSize:12,color:'var(--color-text-secondary)'}}>💰 {e.salary}€ ⚡ {e.efficiency}x 😊 {e.happiness}%</div>
-              <button className="btn btn-sm btn-danger" onClick={() => fire(i)}>✕</button>
+        </div>}
+
+        {/* ═══ EMPLOYEES ═══ */}
+        {tab === 'employees' && <div>
+          <div className="card" style={{marginBottom:16}}>
+            <div className="layout-header">
+              <h3>👥 Empleados</h3>
+              <div style={{display:'flex',gap:4,flexWrap:'wrap'}}>
+                {[
+                  { role: 'cashier', label: '🧾 Cajero', salary: 800 },
+                  { role: 'stockist', label: '📦 Reponedor', salary: 900 },
+                  { role: 'manager', label: '👔 Gerente', salary: 1200 },
+                  { role: 'cleaner', label: '🧹 Limpiador', salary: 700 },
+                  { role: 'security', label: '🛡️ Seguridad', salary: 1000 },
+                ].map(r => (
+                  <button key={r.role} className="btn btn-sm btn-primary" onClick={() => hire(r.role)}>
+                    + {r.label}
+                  </button>
+                ))}
+              </div>
             </div>
-          ))}
-          {s.employees.length === 0 && <p style={{color:'var(--color-text-secondary)',textAlign:'center'}}>Sin empleados. Contrata arriba ↑</p>}
+            <p style={{fontSize:12,color:'var(--color-text-secondary)',marginBottom:8}}>
+              Cada empleado tiene un rol específico. La eficiencia y felicidad afectan el rendimiento.
+            </p>
+          </div>
+          {s.employees.length === 0 ? (
+            <div className="card" style={{textAlign:'center',padding:40}}>
+              <div style={{fontSize:48,marginBottom:12}}>👥</div>
+              <h3>Contrata tu primer empleado</h3>
+              <p style={{color:'var(--color-text-secondary)',marginBottom:16}}>
+                Los empleados mejoran la eficiencia de tu tienda
+              </p>
+              <div style={{display:'flex',gap:8,justifyContent:'center',flexWrap:'wrap'}}>
+                {['cashier','stockist','manager'].map(r => (
+                  <button key={r} className="btn btn-primary" onClick={() => hire(r)}>
+                    Contratar {r}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="employee-grid">
+              {s.employees.map((e, i) => {
+                const roleMeta: Record<string,{icon:string,desc:string}> = {
+                  cashier: { icon: '🧾', desc: 'Cobra a los clientes' },
+                  stockist: { icon: '📦', desc: 'Repone estanterías' },
+                  manager: { icon: '👔', desc: 'Gestiona la tienda' },
+                  cleaner: { icon: '🧹', desc: 'Limpia la tienda' },
+                  security: { icon: '🛡️', desc: 'Vigila la tienda' }
+                }
+                const meta = roleMeta[e.role] || { icon: '👤', desc: '' }
+                const effColor = e.efficiency > 1.2 ? 'var(--color-success)' : e.efficiency > 0.8 ? 'var(--color-warning)' : 'var(--color-danger)'
+                const hapColor = e.happiness > 70 ? 'var(--color-success)' : e.happiness > 40 ? 'var(--color-warning)' : 'var(--color-danger)'
+                return (
+                  <div key={i} className="employee-card card">
+                    <div className="emp-card-header">
+                      <span className="emp-card-avatar" style={{background:`linear-gradient(135deg, hsl(${e.name.length*50},70%,60%), hsl(${e.name.length*50+60},70%,50%))`}}>
+                        {meta.icon}
+                      </span>
+                      <div className="emp-card-info">
+                        <span className="emp-card-name">{e.name}</span>
+                        <span className="emp-card-role" style={{textTransform:'capitalize'}}>{e.role}</span>
+                      </div>
+                      <button className="btn btn-sm btn-danger" onClick={() => fire(i)} title="Despedir">✕</button>
+                    </div>
+                    <div className="emp-card-desc">{meta.desc}</div>
+                    <div className="emp-card-stats">
+                      <div className="emp-stat">
+                        <span className="emp-stat-label">💰 Salario</span>
+                        <span className="emp-stat-val">{e.salary}€</span>
+                      </div>
+                      <div className="emp-stat">
+                        <span className="emp-stat-label">⚡ Eficiencia</span>
+                        <span className="emp-stat-val" style={{color:effColor}}>{e.efficiency.toFixed(1)}x</span>
+                      </div>
+                      <div className="emp-stat">
+                        <span className="emp-stat-label">😊 Felicidad</span>
+                        <span className="emp-stat-val" style={{color:hapColor}}>{e.happiness}%</span>
+                      </div>
+                    </div>
+                    {/* Mini bars */}
+                    <div className="emp-mini-bars">
+                      <div className="emp-mini-row">
+                        <span className="emp-mini-label">Eficiencia</span>
+                        <div className="emp-mini-track">
+                          <div className="emp-mini-fill" style={{width:Math.min(100,(e.efficiency/2)*100)+'%',background:effColor}}/>
+                        </div>
+                      </div>
+                      <div className="emp-mini-row">
+                        <span className="emp-mini-label">Felicidad</span>
+                        <div className="emp-mini-track">
+                          <div className="emp-mini-fill" style={{width:e.happiness+'%',background:hapColor}}/>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
         </div>}
 
       {/* ═══ BUY MODAL ═══ */}
@@ -322,6 +628,7 @@ export default function StoreView() {
           </div>
         </div>
       </div>}
+      </div>
     </div>
   )
 }
