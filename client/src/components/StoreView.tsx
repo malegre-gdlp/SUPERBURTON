@@ -83,7 +83,7 @@ export default function StoreView() {
         loadStore(); loadUser(); loadDay()
       } catch { /* silent auto-tick */ }
       finally { tickRef.current = false }
-    }, 30000)
+    }, 5000)
     return () => clearInterval(iv)
   }, [s?.isOpen, s?._id])
 

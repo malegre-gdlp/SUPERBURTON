@@ -176,7 +176,7 @@ router.patch('/:id', auth, async (req, res) => {
       return res.status(404).json({ error: 'Store not found' });
     }
 
-    const allowedUpdates = ['name', 'description', 'layout', 'decoration', 'isOpen', 'districtType', 'districtName'];
+    const allowedUpdates = ['name', 'description', 'layout', 'decoration', 'isOpen', 'districtType', 'districtName', 'shelves'];
     allowedUpdates.forEach(field => {
       if (req.body[field] !== undefined) {
         store[field] = req.body[field];
