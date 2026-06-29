@@ -85,8 +85,14 @@ io.on('connection', (socket) => {
 // Connect to MongoDB and start server
 const PORT = process.env.PORT || 3001;
 
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/supermarket-simulator';
+
+const mongooseOptions = {
+  serverSelectionTimeoutMS: 10000,
+};
+
 if (process.env.NODE_ENV !== 'test') {
-  mongoose.connect(process.env.MONGODB_URI, { serverSelectionTimeoutMS: 10000 })
+  mongoose.connect(MONGODB_URI, mongooseOptions)
     .then(() => {
       console.log('Connected to MongoDB');
       server.listen(PORT, () => {

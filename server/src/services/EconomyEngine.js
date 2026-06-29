@@ -380,7 +380,10 @@ class EconomyEngine {
 
   calculateCustomerCount(store) {
     const profile = store.getDistrictProfile();
-    const baseCustomers = 10 + store.stats.popularity * 2;
+    // BASE: popularity crece con cada tick y con el aforo
+    const popularityBonus = store.stats.popularity * 2;
+    const aforoBonus = (store.capacityLevel || 1) * 5;  // +5 clientes por nivel de aforo
+    const baseCustomers = 10 + popularityBonus + aforoBonus;
     const capacity = store.getCustomerCapacity();
 
     const districtMultiplier = profile.customerCountMultiplier;
@@ -503,6 +506,10 @@ class EconomyEngine {
     store.stats.totalCustomers += customers;
     store.stats.totalSales += totalSales;
     store.stats.totalRevenue += totalRevenue;
+
+    // Incrementar popularidad con cada tick exitoso
+    const popularityGain = Math.min(2, 0.5 + (totalSales / Math.max(1, customers)) * 0.3);
+    store.stats.popularity = Math.min(100, store.stats.popularity + popularityGain);
 
     // Update satisfaction
     store.stats.customerSatisfaction = Math.max(0,
