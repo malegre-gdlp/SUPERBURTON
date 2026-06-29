@@ -65,15 +65,18 @@ export default function Dashboard() {
       tickRef.current = true
       try {
         const { data } = await gameApi.globalTick()
-        if (data?.storeResults?.length > 0) {
-          spawnConfetti(5)
-          notify('info', `🌍 Tick global — Día ${data.day}: ${data.storesProcessed} tiendas, ${data.totalRevenue.toFixed(0)}€ facturados`)
-          loadStores()
-          loadRanking()
+        if (data) {
+          setGt({day:data.day, timeString:data.timeString, season:data.season, weather:data.weather})
+          if (data.storeResults?.length > 0) {
+            spawnConfetti(3)
+            notify('info', `🌍 D${data.day} ${data.timeString} ${data.weather} — ${data.storesProcessed} tiendas, ${data.totalRevenue.toFixed(0)}€`)
+            loadStores()
+            loadRanking()
+          }
         }
       } catch { /* silent */ }
       finally { tickRef.current = false }
-    }, 60000)
+    }, 30000)
     return () => clearInterval(iv)
   }, [loadStores, notify])
 

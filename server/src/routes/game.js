@@ -62,7 +62,8 @@ router.post('/tick', async (req, res) => {
           storeName: store.name,
           customers: result.customers,
           revenue: result.totalRevenue,
-          profit: result.totalProfit
+          profit: result.totalProfit,
+          sales: result.totalSales
         });
       }
     }

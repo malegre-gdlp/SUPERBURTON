@@ -57,28 +57,35 @@ export default function StoreView() {
 
   useEffect(() => { loadStore(); loadCat(); loadDay() }, [id])
 
-  /* Auto-tick every 30s when store is open */
+  /* Auto global tick every 5s when store is open — afecta a TODOS los supermercados */
   useEffect(() => {
     if (!s?.isOpen) return
     const iv = setInterval(async () => {
       if (tickRef.current || !s?.isOpen) return
       tickRef.current = true
       try {
-        const { data } = await economyApi.tickStore(s._id)
-        if (data?.result) {
-          setTr(data.result)
-          setAnimTick(true); setTimeout(() => setAnimTick(false), 1000)
-          if (data.result.totalProfit > 0) spawnFloat(`+${data.result.totalProfit.toFixed(0)}€ 📈`)
-          if (data.result.customers > 5) popConfetti(3)
-          const cc = Math.min(data.result.customers||0, 20)
-          setCust(Array.from({length:cc}, (_,i) => ({
-            id:i,
-            x:Math.random()*80+10,
-            y:Math.random()*70+15,
-            icon: data.result.customerLog?.[i]?.icon || '🛒',
-            mood: data.result.customerLog?.[i]?.mood || ''
-          })))
-          setTimeout(() => setCust([]), 4000)
+        const { data } = await gameApi.globalTick()
+        if (data) {
+          setGt({day:data.day, hour:data.hour, minute:data.minute, timeString:data.timeString, season:data.season, weather:data.weather})
+          // Show this store's result if available
+          const myResult = data.storeResults?.find((r:any) => r.storeId === s._id)
+          if (myResult) {
+            setTr({
+              customers: myResult.customers,
+              totalRevenue: myResult.revenue,
+              totalProfit: myResult.profit,
+              totalSales: myResult.sales || 0
+            })
+            setAnimTick(true); setTimeout(() => setAnimTick(false), 1000)
+            if (myResult.profit > 0) spawnFloat(`+${myResult.profit.toFixed(0)}€ 📈`)
+            if (myResult.customers > 3) popConfetti(3)
+            const cc = Math.min(myResult.customers||0, 20)
+            setCust(Array.from({length:cc}, (_,i) => ({
+              id:i, x:Math.random()*80+10, y:Math.random()*70+15,
+              icon: '🛒', mood: ''
+            })))
+            setTimeout(() => setCust([]), 4000)
+          }
         }
         loadStore(); loadUser(); loadDay()
       } catch { /* silent auto-tick */ }
@@ -108,15 +115,21 @@ export default function StoreView() {
   const doTick = async () => {
     if (!s) return
     try {
-      const { data } = await economyApi.tickStore(s._id)
-      if (data?.result) {
-        setTr(data.result)
-        setAnimTick(true); setTimeout(() => setAnimTick(false), 1000)
-        if (data.result.totalProfit > 0) spawnFloat(`+${data.result.totalProfit.toFixed(0)}€ 📈`)
-        if (data.result.customers > 3) popConfetti(4)
-        notify('success',`🛒 ${data.result.customers} clientes | 💰 +${data.result.totalRevenue.toFixed(2)}€ | 📈 +${data.result.totalProfit.toFixed(2)}€ ganancia`)
-        setCust(Array.from({length:Math.min(data.result.customers||0,15)}, (_,i) => ({id:i,x:Math.random()*80+10,y:Math.random()*70+15})))
-        setTimeout(() => setCust([]), 4000)
+      const { data } = await gameApi.globalTick()
+      if (data) {
+        setGt({day:data.day, hour:data.hour, minute:data.minute, timeString:data.timeString, season:data.season, weather:data.weather})
+        const myResult = data.storeResults?.find((r:any) => r.storeId === s._id)
+        if (myResult) {
+          setTr({ customers: myResult.customers, totalRevenue: myResult.revenue, totalProfit: myResult.profit, totalSales: myResult.sales })
+          setAnimTick(true); setTimeout(() => setAnimTick(false), 1000)
+          if (myResult.profit > 0) spawnFloat(`+${myResult.profit.toFixed(0)}€ 📈`)
+          if (myResult.customers > 3) popConfetti(4)
+          notify('success',`🌍 Tick global — 🛒 ${myResult.customers} cl. | 💰 +${myResult.revenue.toFixed(2)}€ | 📈 +${myResult.profit.toFixed(2)}€ | ${data.storesProcessed} tiendas`)
+          setCust(Array.from({length:Math.min(myResult.customers||0,15)}, (_,i) => ({id:i,x:Math.random()*80+10,y:Math.random()*70+15})))
+          setTimeout(() => setCust([]), 4000)
+        } else {
+          notify('info', `🌍 Tick global — ${data.storesProcessed} tiendas procesadas`)
+        }
       }
       loadStore(); loadUser(); loadDay()
     } catch (e:any) { notify('error', e?.response?.data?.error || 'Error') }
