@@ -395,4 +395,85 @@ router.post('/:id/restock', auth, async (req, res) => {
   }
 });
 
+// Upgrade store capacity (aforo)
+router.post('/:id/upgrade-capacity', auth, async (req, res) => {
+  try {
+    const store = await Store.findOne({ _id: req.params.id, owner: req.user._id });
+    if (!store) {
+      return res.status(404).json({ error: 'Store not found' });
+    }
+
+    const nextLevel = store.capacityLevel + 1;
+    if (nextLevel > 20) {
+      return res.status(400).json({ error: '¡Aforo ya al máximo (nivel 20)!' });
+    }
+
+    const cost = nextLevel * 1000; // 1000€ × nivel
+    const owner = await User.findById(req.user._id);
+    if (owner.money < cost) {
+      return res.status(400).json({ error: `Necesitas ${cost}€, tienes ${owner.money.toFixed(2)}€` });
+    }
+
+    owner.money -= cost;
+    store.capacityLevel = nextLevel;
+    await owner.save();
+    await store.save();
+
+    res.json({
+      store,
+      money: owner.money,
+      newCapacity: store.getCustomerCapacity(),
+      newMaxCustomers: store.getMaxCustomers(),
+      cost,
+      nextLevelCost: nextLevel < 20 ? (nextLevel + 1) * 1000 : null
+    });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// Buy store upgrade
+router.post('/:id/buy-upgrade', auth, async (req, res) => {
+  try {
+    const store = await Store.findOne({ _id: req.params.id, owner: req.user._id });
+    if (!store) {
+      return res.status(404).json({ error: 'Store not found' });
+    }
+
+    const { upgrade } = req.body;
+    const validUpgrades = ['parkingLot', 'securityCameras', 'selfCheckout', 'loyaltyProgram', 'deliveryService', 'onlineStore'];
+    if (!validUpgrades.includes(upgrade)) {
+      return res.status(400).json({ error: 'Mejora no válida' });
+    }
+
+    if (store.upgrades[upgrade]) {
+      return res.status(400).json({ error: 'Ya tienes esta mejora' });
+    }
+
+    const upgradeCosts = {
+      parkingLot: 5000,
+      securityCameras: 3000,
+      selfCheckout: 8000,
+      loyaltyProgram: 4000,
+      deliveryService: 10000,
+      onlineStore: 15000
+    };
+
+    const cost = upgradeCosts[upgrade];
+    const owner = await User.findById(req.user._id);
+    if (owner.money < cost) {
+      return res.status(400).json({ error: `Necesitas ${cost}€, tienes ${owner.money.toFixed(2)}€` });
+    }
+
+    owner.money -= cost;
+    store.upgrades[upgrade] = true;
+    await owner.save();
+    await store.save();
+
+    res.json({ store, money: owner.money });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
 module.exports = router;

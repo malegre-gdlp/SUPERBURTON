@@ -50,6 +50,7 @@ export interface Store {
   upgrades: Upgrades
   isOpen: boolean
   isFranchise: boolean
+  capacityLevel: number
   priceFairnessHistory: FairnessRecord[]
   inspections: Inspection[]
 }

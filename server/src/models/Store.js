@@ -129,6 +129,7 @@ const storeSchema = new mongoose.Schema({
   },
   level: { type: Number, default: 1 },
   experience: { type: Number, default: 0 },
+  capacityLevel: { type: Number, default: 1, min: 1, max: 20 },
   isOpen: { type: Boolean, default: false },
   isFranchise: { type: Boolean, default: false },
   franchiseOf: {
@@ -219,7 +220,10 @@ storeSchema.methods.getTotalProducts = function() {
 };
 
 storeSchema.methods.getCustomerCapacity = function() {
-  return this.layout.width * this.layout.height * 3;
+  // Base capacity + per capacityLevel (upgradable aforo)
+  const base = this.layout.width * this.layout.height; // 80
+  const levelBonus = this.capacityLevel * 20;           // +20 por nivel
+  return base + levelBonus;
 };
 
 storeSchema.methods.getSpendingRange = function() {
@@ -269,7 +273,7 @@ storeSchema.methods.getLevelMultiplier = function() {
 };
 
 storeSchema.methods.getMaxCustomers = function() {
-  return 10 + this.level * 5 + this.shelves.length * 2 + this.employees.length * 3;
+  return 10 + this.level * 5 + this.shelves.length * 2 + this.employees.length * 3 + this.capacityLevel * 10;
 };
 
 const StoreModel = mongoose.model('Store', storeSchema);

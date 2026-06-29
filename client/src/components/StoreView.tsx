@@ -320,6 +320,39 @@ export default function StoreView() {
               <div className="tick-row" style={{fontWeight:700,color:'var(--color-primary)'}}><span>📈 Ganancia</span><span>+{tr.totalProfit.toFixed(2)}€</span></div>
             </div>}
 
+            {/* Aforo (customer capacity) meter */}
+            <div className="aforo-card" style={{marginTop:12,marginBottom:12,padding:'10px 12px',background:'var(--color-bg)',borderRadius:8}}>
+              <div className="aforo-header" style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:6}}>
+                <span style={{fontWeight:700,fontSize:13}}>🚪 Aforo máximo</span>
+                <span style={{fontSize:12,color:'var(--color-text-secondary)'}}>
+                  Nv.{s.capacityLevel||1}/20
+                </span>
+              </div>
+              <div className="aforo-bar" style={{height:8,background:'var(--color-border)',borderRadius:4,overflow:'hidden',marginBottom:4}}>
+                <div style={{height:'100%',background:'linear-gradient(90deg,#2196F3,#00BCD4)',borderRadius:4,width:Math.min(100,((s.capacityLevel||1)/20)*100)+'%',transition:'width .5s'}}/>
+              </div>
+              <div style={{display:'flex',justifyContent:'space-between',fontSize:10,color:'var(--color-text-light)',marginBottom:6}}>
+                <span>Capacidad actual: {s.layout.width * s.layout.height + (s.capacityLevel||1) * 20} clientes</span>
+                <span>Máx: {(s.capacityLevel||1) >= 20 ? '✅ MAX' : `+${((s.capacityLevel||1)+1)*20} cl.`}</span>
+              </div>
+              {(s.capacityLevel||1) < 20 && (
+                <button className="btn btn-sm btn-primary" style={{width:'100%'}} onClick={async () => {
+                  try {
+                    const { data } = await storeApi.upgradeCapacity(s._id)
+                    setS(data.store)
+                    dispatch({ type: 'SET_USER', payload: { ...state.user!, money: data.money } as any })
+                    notify('success', `🚪 ¡Aforo mejorado a nivel ${data.store.capacityLevel}! Capacidad: ${data.newCapacity} clientes`)
+                    popConfetti(6)
+                    spawnFloat(`-${data.cost}€`, 'floating-text coins')
+                  } catch (e: any) {
+                    notify('error', e?.response?.data?.error || 'Error al mejorar aforo')
+                  }
+                }}>
+                  🚪 Mejorar aforo — {(s.capacityLevel||1) < 20 ? `${((s.capacityLevel||1)+1)*1000}€` : 'MAX'}
+                </button>
+              )}
+            </div>
+
             {/* Satisfaction meters */}
             <div style={{marginTop:12}}>
               <div className="satisfaction-row">
@@ -390,6 +423,53 @@ export default function StoreView() {
                 )}
               </div>
             )}
+
+            {/* Upgrades section */}
+            <div style={{marginTop:12}}>
+              <h4 style={{fontSize:13,marginBottom:6}}>🏪 Mejoras</h4>
+              <div className="upgrades-grid" style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:4}}>
+                {[
+                  { key: 'parkingLot', label: '🅿️ Parking', desc: '+20% clientes', cost: 5000 },
+                  { key: 'securityCameras', label: '📹 Cámaras', desc: 'Evita robos', cost: 3000 },
+                  { key: 'selfCheckout', label: '🏧 Autocobro', desc: 'Sin colas', cost: 8000 },
+                  { key: 'loyaltyProgram', label: '💳 Lealtad', desc: '+15% lealtad', cost: 4000 },
+                  { key: 'deliveryService', label: '🚚 Delivery', desc: 'Ventas online', cost: 10000 },
+                  { key: 'onlineStore', label: '🛒 Online', desc: 'Tienda virtual', cost: 15000 },
+                ].map(u => {
+                  const owned = (s?.upgrades as any)?.[u.key]
+                  return (
+                    <div key={u.key} className={`upgrade-item ${owned ? 'owned' : ''}`} style={{
+                      padding:'6px 8px',background:owned?'rgba(76,175,80,.1)':'var(--color-bg)',
+                      borderRadius:6,display:'flex',alignItems:'center',gap:6,
+                      border:owned?'1px solid rgba(76,175,80,.3)':'1px solid transparent',
+                      fontSize:12,opacity:owned?1:.7
+                    }}>
+                      <span style={{fontSize:16}}>{u.label.split(' ')[0]}</span>
+                      <div style={{flex:1}}>
+                        <span style={{fontWeight:600,display:'block',fontSize:11}}>{u.label.split(' ').slice(1).join(' ')}</span>
+                        <span style={{fontSize:9,color:'var(--color-text-light)'}}>{owned ? '✅ Activo' : u.desc}</span>
+                      </div>
+                      {!owned && (
+                        <button className="btn btn-sm" style={{background:'var(--color-primary)',color:'#fff',fontSize:10,padding:'3px 6px',borderRadius:4,whiteSpace:'nowrap'}}
+                          onClick={async () => {
+                            try {
+                              const { data } = await storeApi.buyUpgrade(s!._id, u.key)
+                              setS(data.store)
+                              dispatch({ type: 'SET_USER', payload: { ...state.user!, money: data.money } as any })
+                              notify('success', `✅ ${u.label} adquirida!`)
+                              popConfetti(5)
+                            } catch (e: any) {
+                              notify('error', e?.response?.data?.error || 'Error')
+                            }
+                          }}>
+                          {u.cost}€
+                        </button>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
 
             {/* Activity feed from tick */}
             {tr?.rejectedPurchases?.length > 0 && (
