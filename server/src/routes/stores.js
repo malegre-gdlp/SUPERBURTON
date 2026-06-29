@@ -266,20 +266,6 @@ router.delete('/:id/employees/:empIndex', auth, async (req, res) => {
   }
 });
 
-// Restock shelves with products from catalog (for existing stores)
-router.post('/:id/restock', auth, async (req, res) => {
-  try {
-    const store = await Store.findOne({ _id: req.params.id, owner: req.user._id });
-    if (!store) {
-      return res.status(404).json({ error: 'Store not found' });
-    }
-    await autoStockStore(store);
-    res.json({ store });
-  } catch (error) {
-    res.status(400).json({ error: error.message });
-  }
-});
-
 // Add to warehouse (buy products from wholesale market)
 router.post('/:id/warehouse', auth, async (req, res) => {
   try {

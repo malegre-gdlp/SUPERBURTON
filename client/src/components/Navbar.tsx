@@ -7,14 +7,14 @@ import './Navbar.css'
 export default function Navbar() {
   const { state, logout } = useGame()
   const navigate = useNavigate()
-  const [gameDay, setGameDay] = useState(1)
+  const [gameState, setGameState] = useState({ day: 1, timeString: '08:00', weather: 'soleado', season: 'verano' })
   const maxStoreLevel = state.stores?.length > 0 
     ? Math.max(...state.stores.map((s: any) => (s as any).level || 1))
     : state.user?.level || 1
 
   useEffect(() => {
     const loadDay = async () => {
-      try { const { data } = await gameApi.getState(); setGameDay(data.day) } catch {}
+      try { const { data } = await gameApi.getState(); setGameState({ day: data.day, timeString: data.timeString, weather: data.weather, season: data.season }) } catch {}
     }
     loadDay()
     const iv = setInterval(loadDay, 30000)
@@ -44,8 +44,11 @@ export default function Navbar() {
               <Link to="/dashboard" className="nav-link">Mi Tienda</Link>
               {maxStoreLevel >= 5 && <Link to="/white-label" className="nav-link">🏷️ Marca Blanca</Link>}
               {maxStoreLevel >= 10 && <Link to="/franchises" className="nav-link">🏢 Franquicias</Link>}
-              <span className="nav-game-day" title="Día de juego global">
-                📅 D{gameDay}
+              <span className="nav-game-day" title={`Día ${gameState.day} · ${gameState.season}`}>
+                📅 D{gameState.day} · 🕐 {gameState.timeString}
+                <span style={{marginLeft:4}}>
+                  {gameState.weather === 'soleado' ? '☀️' : gameState.weather === 'nublado' ? '☁️' : gameState.weather === 'lluvioso' ? '🌧️' : gameState.weather === 'tormenta' ? '⛈️' : '❄️'}
+                </span>
               </span>
               <div className="nav-user">
                 <div className="nav-user-info">

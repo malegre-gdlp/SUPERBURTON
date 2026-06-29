@@ -43,11 +43,20 @@ export default function Dashboard() {
   const [ranking, setRanking] = useState<any[]>([])
   const [topPlayers, setTopPlayers] = useState<any[]>([])
   const [autoTicking, setAutoTicking] = useState(false)
+  const [gt, setGt] = useState<{day:number;timeString:string;season:string;weather:string}>({day:1,timeString:'08:00',season:'verano',weather:'soleado'})
   const tickRef = useRef(false)
 
+  /* Load game time */
+  const loadTime = useCallback(async () => {
+    try {
+      const { data } = await gameApi.getState()
+      setGt({day:data.day, timeString:data.timeString, season:data.season, weather:data.weather})
+    } catch {}
+  }, [])
+
   useEffect(() => {
-    if (state.user) { loadStores(); loadRanking() }
-  }, [state.user, loadStores])
+    if (state.user) { loadStores(); loadRanking(); loadTime() }
+  }, [state.user, loadStores, loadTime])
 
   /* Auto global tick every 60s */
   useEffect(() => {
@@ -120,7 +129,8 @@ export default function Dashboard() {
       const { data } = await gameApi.globalTick()
       if (data?.storeResults?.length > 0) {
         spawnConfetti(10)
-        notify('success', `🌍 Tick global completado — Día ${data.day}`)
+        notify('success', `🌍 Tick global completado — Día ${data.day} ${data.timeString} ${data.weather}`)
+        setGt({day:data.day, timeString:data.timeString, season:data.season, weather:data.weather})
         data.storeResults.forEach((r: any) => {
           if (r.profit > 0) spawnFloatingText(`+${r.profit.toFixed(0)}€ ${r.storeName}`, 'floating-text coins')
         })
@@ -148,7 +158,13 @@ export default function Dashboard() {
       <div className="container">
         <div className="dashboard-header">
           <div>
-            <h1>Mis Tiendas</h1>
+            <div className="dashboard-title-row">
+              <h1>Mis Tiendas</h1>
+              <span className="game-time-badge" title={`Día ${gt.day} · ${gt.season}`}>
+                📅 D{gt.day} · 🕐 {gt.timeString}
+                <span className="game-weather">{gt.weather === 'soleado' ? '☀️' : gt.weather === 'nublado' ? '☁️' : gt.weather === 'lluvioso' ? '🌧️' : gt.weather === 'tormenta' ? '⛈️' : '❄️'}</span>
+              </span>
+            </div>
             <p className="text-secondary">
               Nivel {state.user?.level} • 💰 {state.user?.money.toFixed(2)} €
             </p>

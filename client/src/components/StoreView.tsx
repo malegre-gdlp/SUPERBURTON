@@ -53,6 +53,8 @@ export default function StoreView() {
   const [animTick, setAnimTick] = useState(false)
   const tickRef = useRef(false)
 
+  const [gt, setGt] = useState<{day:number;hour:number;minute:number;timeString:string;season:string;weather:string}>({day:1,hour:8,minute:0,timeString:'08:00',season:'verano',weather:'soleado'})
+
   useEffect(() => { loadStore(); loadCat(); loadDay() }, [id])
 
   /* Auto-tick every 30s when store is open */
@@ -68,7 +70,14 @@ export default function StoreView() {
           setAnimTick(true); setTimeout(() => setAnimTick(false), 1000)
           if (data.result.totalProfit > 0) spawnFloat(`+${data.result.totalProfit.toFixed(0)}€ 📈`)
           if (data.result.customers > 5) popConfetti(3)
-          setCust(Array.from({length:Math.min(data.result.customers||0,15)}, (_,i) => ({id:i,x:Math.random()*80+10,y:Math.random()*70+15})))
+          const cc = Math.min(data.result.customers||0, 20)
+          setCust(Array.from({length:cc}, (_,i) => ({
+            id:i,
+            x:Math.random()*80+10,
+            y:Math.random()*70+15,
+            icon: data.result.customerLog?.[i]?.icon || '🛒',
+            mood: data.result.customerLog?.[i]?.mood || ''
+          })))
           setTimeout(() => setCust([]), 4000)
         }
         loadStore(); loadUser(); loadDay()
@@ -85,7 +94,11 @@ export default function StoreView() {
     try { const { data } = await catalogApi.getAll({}); setCat(data.products) } catch {}
   }
   const loadDay = async () => {
-    try { const { data } = await gameApi.getState(); setDay(data.day) } catch {}
+    try {
+      const { data } = await gameApi.getState()
+      setDay(data.day)
+      setGt({day:data.day, hour:data.hour, minute:data.minute, timeString:data.timeString, season:data.season, weather:data.weather})
+    } catch {}
   }
   const loadUser = async () => {
     try { const { data } = await authApi.getProfile(); dispatch({ type:'SET_USER', payload:data.user }) } catch {}
@@ -212,7 +225,11 @@ export default function StoreView() {
   return (
     <div className="page store-view">
       {cust.length > 0 && <div className="customer-overlay">
-        {cust.map(c => <div key={c.id} className="customer-dot" style={{left:c.x+'%',top:c.y+'%'}}>🛒</div>)}
+        {cust.map(c => (
+          <div key={c.id} className="customer-dot" style={{left:c.x+'%',top:c.y+'%'}} title={c.mood}>
+            {c.icon || '🛒'}
+          </div>
+        ))}
       </div>}
 
       <div className="container">
@@ -226,7 +243,9 @@ export default function StoreView() {
             <div className="store-meta">
               <span>{D[s.districtType]||'📍'} {s.districtName}</span>
               <span>⭐ {s.stats.rating.toFixed(1)}</span>
-              <span>📅 Día {day}</span>
+              <span>📅 Día {gt.day}</span>
+              <span>🕐 {gt.timeString}</span>
+              <span>{gt.weather === 'soleado' ? '☀️' : gt.weather === 'nublado' ? '☁️' : gt.weather === 'lluvioso' ? '🌧️' : gt.weather === 'tormenta' ? '⛈️' : '❄️'} {gt.season}</span>
               <span>⭐ Nv.{s.level||1}</span>
               <span>💰 {money.toFixed(2)}€</span>
               <span>📦 {totStock}</span>
@@ -322,10 +341,47 @@ export default function StoreView() {
               </div>
             </div>
 
+            {/* Customer flow visualization */}
+            {tr?.customerLog?.length > 0 && (
+              <div className="customer-flow" style={{marginTop:12}}>
+                <h4 style={{fontSize:13,marginBottom:6}}>🛍️ Clientes recientes</h4>
+                <div className="customer-flow-list">
+                  {tr.customerLog.slice(0, 6).map((c: any, i: number) => {
+                    const moodEmoji: Record<string,string> = { contento:'😊', feliz:'😄', apurado:'😰', exigente:'🤔', quejoso:'😤', indiferente:'😐', amigable:'🤗', perdido:'😕' }
+                    return (
+                      <div key={i} className="customer-flow-item" style={{
+                        background: c.satisfied ? 'rgba(76,175,80,.08)' : 'rgba(244,67,54,.08)',
+                        borderLeft: `3px solid ${c.satisfied ? 'var(--color-success)' : 'var(--color-danger)'}`
+                      }}>
+                        <span className="cf-icon">{c.icon}</span>
+                        <div className="cf-info">
+                          <span className="cf-type">{c.type} {moodEmoji[c.mood]||c.mood}</span>
+                          <span className="cf-basket">
+                            {c.itemsBought > 0 ? `🛒 ${c.itemsBought} artículos · ${c.spent.toFixed(2)}€` : '🚫 Sin compra'}
+                          </span>
+                        </div>
+                        <span className={`cf-status ${c.satisfied ? 'cf-satisfied' : 'cf-unsatisfied'}`}>
+                          {c.satisfied ? '✅' : '❌'}
+                        </span>
+                      </div>
+                    )
+                  })}
+                </div>
+                {/* Customer type summary */}
+                {tr.customerTypes && (
+                  <div style={{display:'flex',gap:6,flexWrap:'wrap',marginTop:6,padding:'6px 0'}}>
+                    {Object.entries(tr.customerTypes.types).map(([type, count]: [string, any]) => (
+                      <span key={type} className="customer-type-tag">{type} ×{count}</span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Activity feed from tick */}
             {tr?.rejectedPurchases?.length > 0 && (
               <div className="activity-feed">
-                <h4>⚠️ Rechazos</h4>
+                <h4>⚠️ Rechazos recientes</h4>
                 {tr.rejectedPurchases.slice(0, 3).map((rp: any, i: number) => (
                   <div key={i} className="activity-item">
                     <span>❌ {rp.productName}</span>
@@ -362,30 +418,139 @@ export default function StoreView() {
 
         {/* ═══ PRODUCTS ═══ */}
         {tab === 'products' && <div>
+          {/* Quick price presets row */}
+          <div className="card" style={{marginBottom:12}}>
+            <div className="layout-header">
+              <h3>📦 Precios</h3>
+              <div style={{display:'flex',gap:4,flexWrap:'wrap'}}>
+                <span style={{fontSize:11,color:'var(--color-text-secondary)',padding:'4px 0'}}>Rápido:</span>
+                {[
+                  { label: '💥 Promo', mult: 0.85, color: '#F44336' },
+                  { label: '💰 Normal', mult: 1.0, color: '#4CAF50' },
+                  { label: '💎 Premium', mult: 1.3, color: '#FF9800' },
+                ].map(pre => (
+                  <button key={pre.label} className="btn btn-sm" style={{background:pre.color,color:'#fff'}}
+                    onClick={async () => {
+                      if (!s) return
+                      const copy = JSON.parse(JSON.stringify(s))
+                      let changed = 0
+                      for (const shelf of copy.shelves) {
+                        for (const sp of shelf.products) {
+                          const p = gp(sp.productId)
+                          if (p) {
+                            const newP = Math.round((p.wholesalePrice || p.basePrice) * pre.mult * 100) / 100
+                            if (newP !== sp.price) { sp.price = newP; changed++ }
+                          }
+                        }
+                      }
+                      if (changed > 0) {
+                        try {
+                          const { data } = await storeApi.update(s._id, { shelves: copy.shelves } as any)
+                          setS(data.store); notify('success', `${changed} productos → ${pre.label}`)
+                        } catch { notify('error','Error') }
+                      }
+                    }}>
+                    {pre.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Product shelves */}
           {s.shelves.map((sh, si) => sh.products.length > 0 && (
             <div key={si} className="card" style={{marginBottom:10, borderLeft:`4px solid ${C[sh.category]||'#ccc'}`}}>
-              <h4 style={{color:C[sh.category],margin:'0 0 8px',fontSize:14}}>{I[sh.category]} <b>{sh.category}</b> <span style={{fontWeight:400,fontSize:11,color:'var(--color-text-secondary)'}}>{sh.type}</span></h4>
-              <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(200px,1fr))',gap:6}}>
+              <h4 style={{color:C[sh.category],margin:'0 0 8px',fontSize:14}}>
+                {I[sh.category]} <b>{sh.category}</b>
+                <span style={{fontWeight:400,fontSize:11,color:'var(--color-text-secondary)',marginLeft:8}}>{sh.type}</span>
+              </h4>
+              <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(280px,1fr))',gap:8}}>
                 {sh.products.map((sp, pi) => {
                   const p = gp(sp.productId)
                   const fill = sp.maxCapacity > 0 ? Math.round(sp.quantity/sp.maxCapacity*100) : 0
-                  return <div key={pi} className="prod-card" style={{border:`1px solid ${C[sh.category]||'#eee'}22`,borderRadius:8,padding:'8px 10px',background:'var(--color-bg)'}}>
+                  const wholesalePrice = p?.wholesalePrice || p?.basePrice || 1
+                  const minPrice = Math.round(wholesalePrice * 0.95 * 100) / 100
+                  const maxPrice = Math.round(wholesalePrice * 2.5 * 100) / 100
+                  const pRange = maxPrice - minPrice
+                  const pct = pRange > 0 ? ((sp.price - minPrice) / pRange) * 100 : 50
+                  const isOver = sp.price > maxPrice
+                  const isUnder = sp.price < minPrice
+                  return <div key={pi} className="prod-card" style={{border:`1px solid ${C[sh.category]||'#eee'}44`,borderRadius:8,padding:'10px 12px',background:'var(--color-bg)'}}>
+                    {/* Product name + stock */}
                     <div style={{display:'flex',justifyContent:'space-between',alignItems:'start',marginBottom:4}}>
                       <span style={{fontSize:13,fontWeight:600,flex:1}}>{p?.name||'?'}</span>
-                      <span style={{fontSize:10,color:fill>50?'#4CAF50':fill>20?'#FF9800':'#F44336',fontWeight:700,whiteSpace:'nowrap'}}>
+                      <span style={{fontSize:10,color:fill>50?'var(--color-success)':fill>20?'var(--color-warning)':'var(--color-danger)',fontWeight:700,whiteSpace:'nowrap'}}>
                         {fill>50?'●':fill>20?'⚠️':'🔴'} {sp.quantity}/{sp.maxCapacity}
                       </span>
                     </div>
                     {/* Stock bar */}
-                    <div style={{background:'var(--color-border)',borderRadius:3,height:5,marginBottom:6,overflow:'hidden'}}>
+                    <div style={{background:'var(--color-border)',borderRadius:3,height:4,marginBottom:8,overflow:'hidden'}}>
                       <div style={{height:'100%',background:C[sh.category]||'#4CAF50',borderRadius:3,width:fill+'%',transition:'width .4s'}}/>
                     </div>
-                    <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',gap:4}}>
-                      <div style={{display:'flex',alignItems:'center',gap:4}}>
-                        <input type="number" step="0.01" defaultValue={sp.price} style={{width:60,padding:'2px 4px',fontSize:12,border:'1px solid var(--color-border)',borderRadius:4,textAlign:'right'}}
-                          onBlur={e => { const v = parseFloat(e.target.value); if (v && v !== sp.price) updatePrice(si, pi, v) }}
-                          onKeyDown={e => { if (e.key === 'Enter') { const v = parseFloat((e.target as HTMLInputElement).value); if (v) updatePrice(si, pi, v); (e.target as HTMLInputElement).blur() } }}/>
-                        <span style={{fontSize:10,color:'var(--color-text-secondary)'}}>€</span>
+                    {/* Visual price slider */}
+                    <div className="price-slider-container">
+                      <div className="price-slider-info">
+                        <span className="price-slider-label">PVP</span>
+                        <div className="price-slider-input-group">
+                          <input type="number" step="0.01" value={sp.price}
+                            style={{width:65,padding:'2px 6px',fontSize:13,border:`2px solid ${isOver?'var(--color-danger)':isUnder?'var(--color-info)':'var(--color-primary)'}`,borderRadius:4,textAlign:'right',fontWeight:700}}
+                            onChange={e => {
+                              const v = parseFloat(e.target.value)
+                              if (v && v > 0) {
+                                const copy = JSON.parse(JSON.stringify(s))
+                                copy.shelves[si].products[pi].price = v
+                                setS(copy)
+                              }
+                            }}
+                            onBlur={e => { const v = parseFloat(e.target.value); if (v && v !== sp.price) updatePrice(si, pi, v) }}
+                            onKeyDown={e => { if (e.key === 'Enter') { const v = parseFloat((e.target as HTMLInputElement).value); if (v) updatePrice(si, pi, v); (e.target as HTMLInputElement).blur() } }}/>
+                          <span className="price-slider-currency">€</span>
+                        </div>
+                      </div>
+                      {/* Range bar */}
+                      <div className="price-range-bar">
+                        <div className="price-range-track">
+                          <div className="price-range-fill" style={{
+                            left: '5%',
+                            width: '90%',
+                            background: `linear-gradient(90deg, #F44336, #FF9800, #4CAF50, #FF9800, #F44336)`
+                          }}/>
+                          <div className="price-range-thumb" style={{left: `${Math.max(2, Math.min(98, pct))}%`}} title={`${sp.price.toFixed(2)}€`}>
+                            <div className="price-thumb-dot" style={{background: isOver ? 'var(--color-danger)' : isUnder ? 'var(--color-info)' : 'var(--color-primary)'}}/>
+                          </div>
+                          {/* Marks */}
+                          <div className="price-range-marks">
+                            <span className="price-mark" style={{left:'5%'}}>{minPrice.toFixed(1)}</span>
+                            <span className="price-mark price-mark-mid" style={{left:'47%'}}>📊</span>
+                            <span className="price-mark" style={{right:'5%'}}>{maxPrice.toFixed(1)}</span>
+                          </div>
+                        </div>
+                        <input type="range" min={minPrice} max={maxPrice * 1.5} step={0.01} value={sp.price}
+                          onChange={e => {
+                            const v = parseFloat(e.target.value)
+                            const copy = JSON.parse(JSON.stringify(s))
+                            copy.shelves[si].products[pi].price = v
+                            setS(copy)
+                          }}
+                          onMouseUp={e => { const v = parseFloat((e.target as HTMLInputElement).value); if (v) updatePrice(si, pi, v) }}
+                          onTouchEnd={e => { const v = parseFloat((e.target as HTMLInputElement).value); if (v) updatePrice(si, pi, v) }}
+                          style={{width:'100%',marginTop:4,height:20,cursor:'pointer',accentColor:C[sh.category]||'#4CAF50'}}
+                        />
+                      </div>
+                      {/* Price indicators */}
+                      <div style={{display:'flex',justifyContent:'space-between',fontSize:10,marginTop:2}}>
+                        <span style={{color:isUnder?'var(--color-info)':'var(--color-text-light)'}}>
+                          {isUnder ? '⚠️ Por debajo' : `Mín ${minPrice.toFixed(2)}€`}
+                        </span>
+                        <span style={{color:isOver?'var(--color-danger)':'var(--color-text-light)'}}>
+                          {isOver ? '⚠️ Por encima' : `Máx ${maxPrice.toFixed(2)}€`}
+                        </span>
+                      </div>
+                      {/* Wholesale cost info */}
+                      <div style={{fontSize:9,color:'var(--color-text-light)',marginTop:4,display:'flex',gap:8}}>
+                        <span>📦 Coste: {wholesalePrice.toFixed(2)}€</span>
+                        <span>📈 Margen: {((sp.price - wholesalePrice) / wholesalePrice * 100).toFixed(0)}%</span>
+                        <span>💰 Ganancia: {(sp.price - wholesalePrice).toFixed(2)}€/ud</span>
                       </div>
                     </div>
                   </div>

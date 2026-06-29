@@ -13,13 +13,28 @@ router.get('/state', async (req, res) => {
     if (!state) {
       state = await GameState.create({ key: 'global', day: 1 });
     }
-    res.json({ day: state.day, lastTick: state.lastTick, tickCount: state.tickCount });
+    // Format time as HH:MM
+    const hourStr = String(state.hour).padStart(2, '0');
+    const minStr = String(state.minute).padStart(2, '0');
+    res.json({
+      day: state.day,
+      hour: state.hour,
+      minute: state.minute,
+      timeString: `${hourStr}:${minStr}`,
+      season: state.season,
+      weather: state.weather,
+      lastTick: state.lastTick,
+      tickCount: state.tickCount,
+      totalStoresEver: state.totalStoresEver,
+      totalRevenueEver: state.totalRevenueEver,
+      totalCustomersEver: state.totalCustomersEver
+    });
   } catch (e) {
     res.status(400).json({ error: e.message });
   }
 });
 
-// Global tick — processes ALL open stores and advances the day
+// Global tick — processes ALL open stores and advances time
 router.post('/tick', async (req, res) => {
   try {
     let gameState = await GameState.findOne({ key: 'global' });
@@ -52,14 +67,25 @@ router.post('/tick', async (req, res) => {
       }
     }
 
-    // Advance global day
-    gameState.day += 1;
+    // Advance time
+    gameState.advanceTime();
     gameState.lastTick = new Date();
     gameState.tickCount += 1;
+    gameState.totalCustomersEver += totalCustomers;
+    gameState.totalRevenueEver += totalRevenue;
+    gameState.totalStoresEver = Math.max(gameState.totalStoresEver, openStores.length);
     await gameState.save();
+
+    const hourStr = String(gameState.hour).padStart(2, '0');
+    const minStr = String(gameState.minute).padStart(2, '0');
 
     res.json({
       day: gameState.day,
+      hour: gameState.hour,
+      minute: gameState.minute,
+      timeString: `${hourStr}:${minStr}`,
+      season: gameState.season,
+      weather: gameState.weather,
       storesProcessed: results.length,
       totalCustomers,
       totalRevenue,

@@ -212,14 +212,38 @@ export interface StoreTickResult {
   totalProfit: number
   totalSalaries: number
   netProfit: number
-  productsSold: ProductSale[]
+  restocked: number
   rejectedPurchases: RejectedPurchase[]
   customerSatisfaction: number
   customerLoyalty: number
   priceFairnessReputation: number
   districtType: string
+  districtName?: string
   averageBasketSize: number
   spendingLimit: number
+  customerLog?: CustomerLogEntry[]
+  customerTypes?: CustomerTypeSummary
+  employeeCount?: number
+  shelfCount?: number
+  storeLevel?: number
+  storeExperience?: number
+}
+
+export interface CustomerLogEntry {
+  type: string
+  icon: string
+  mood: string
+  budget: number
+  spent: number
+  itemsBought: number
+  satisfied: boolean
+  basket: { productId: string; productName: string; category: string; qty: number; unitPrice: number; totalCost: number }[]
+}
+
+export interface CustomerTypeSummary {
+  types: Record<string, number>
+  moods: Record<string, number>
+  total: number
 }
 
 export interface ProductSale {
@@ -237,6 +261,20 @@ export interface RejectedPurchase {
   price: number
   reason: string
   score: number
+}
+
+export interface GameStateResponse {
+  day: number
+  hour: number
+  minute: number
+  timeString: string
+  season: string
+  weather: string
+  lastTick: string
+  tickCount: number
+  totalStoresEver: number
+  totalRevenueEver: number
+  totalCustomersEver: number
 }
 
 export interface MarketOverview {

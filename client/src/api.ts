@@ -98,8 +98,8 @@ export const economyApi = {
 // GAME (global state, auto-tick, ranking)
 // ============================================================
 export const gameApi = {
-  getState: () => api.get<{ day: number; lastTick: string; tickCount: number }>('/game/state'),
-  globalTick: () => api.post<{ day: number; storesProcessed: number; totalCustomers: number; totalRevenue: number; storeResults: any[] }>('/game/tick'),
+  getState: () => api.get<import('./types').GameStateResponse>('/game/state'),
+  globalTick: () => api.post<import('./types').GameStateResponse & { storesProcessed: number; totalCustomers: number; totalRevenue: number; storeResults: any[] }>('/game/tick'),
   getRanking: () => api.get<{ ranking: any[]; topPlayers: any[] }>('/game/ranking')
 }
 

@@ -417,15 +417,28 @@ class EconomyEngine {
     let rejectedPurchases = [];
     let totalSatisfactionDelta = 0;
 
+    // Customer type distribution
+    const customerTypes = [
+      { type: 'familia', icon: '👨‍👩‍👧‍👦', budgetMod: 1.3, patience: 1.2, moods: ['contento','apurado','exigente'] },
+      { type: 'estudiante', icon: '🧑‍🎓', budgetMod: 0.6, patience: 0.8, moods: ['feliz','apurado','quejoso'] },
+      { type: 'profesional', icon: '👔', budgetMod: 1.5, patience: 0.7, moods: ['exigente','apurado','indiferente'] },
+      { type: 'jubilado', icon: '👴', budgetMod: 0.7, patience: 1.5, moods: ['contento','exigente','amigable'] },
+      { type: 'turista', icon: '🧳', budgetMod: 1.2, patience: 0.9, moods: ['feliz','perdido','apurado'] },
+      { type: 'vecino', icon: '🏠', budgetMod: 0.9, patience: 1.1, moods: ['amigable','contento','quejoso'] },
+    ];
+
     // Simulate smart customer purchases (using cached products)
+    const customerLog = [];
     for (let i = 0; i < customers; i++) {
-      const spendingLimit = this.getCustomerSpendingLimit(store);
+      const cType = customerTypes[Math.floor(Math.random() * customerTypes.length)];
+      const mood = cType.moods[Math.floor(Math.random() * cType.moods.length)];
+      const spendingLimit = this.getCustomerSpendingLimit(store) * cType.budgetMod;
       let remainingBudget = spendingLimit;
       let customerBasket = [];
       let customerSatisfied = true;
 
-      const shelfVisits = Math.min(store.shelves.length, Math.floor(Math.random() * 3) + 1);
-      const visitedShelves = this._shuffleArray([...store.shelves]).slice(0, shelfVisits);
+      const shelfVisits = Math.min(store.shelves.length, Math.floor(Math.random() * 3 * cType.patience) + 1);
+      const visitedShelves = this._shuffleArray([...store.shelves]).slice(0, Math.max(1, shelfVisits));
 
       for (const shelf of visitedShelves) {
         if (remainingBudget <= 0 || !shelf.products.length) break;
@@ -449,6 +462,14 @@ class EconomyEngine {
             shelfProduct.quantity -= qty;
             const costPrice = product.wholesalePrice || 0;
             totalSales += qty; totalRevenue += cost; totalProfit += qty * (shelfProduct.price - costPrice);
+            customerBasket.push({
+              productId: shelfProduct.productId,
+              productName: product.name,
+              category: product.category,
+              qty,
+              unitPrice: shelfProduct.price,
+              totalCost: cost
+            });
             if (score < 40) customerSatisfied = false;
           }
         } else {
@@ -456,6 +477,21 @@ class EconomyEngine {
           if (score < 30) customerSatisfied = false;
         }
       }
+
+      const spent = spendingLimit - remainingBudget;
+      if (customerBasket.length > 0 || rejectedPurchases.length > 0) {
+        customerLog.push({
+          type: cType.type,
+          icon: cType.icon,
+          mood,
+          budget: spendingLimit,
+          spent: Math.round(spent * 100) / 100,
+          itemsBought: customerBasket.length,
+          satisfied: customerSatisfied,
+          basket: customerBasket.slice(0, 3)
+        });
+      }
+
       if (customerSatisfied && Math.random() > 0.5) totalSatisfactionDelta += 0.5;
       else if (!customerSatisfied) totalSatisfactionDelta -= 1;
     }
@@ -529,8 +565,15 @@ class EconomyEngine {
       customerLoyalty: store.customerLoyalty,
       priceFairnessReputation: store.stats.priceFairnessReputation,
       districtType: store.districtType,
+      districtName: store.districtName,
       averageBasketSize: store.stats.averageBasketSize,
-      spendingLimit: this.getCustomerSpendingLimit(store)
+      spendingLimit: this.getCustomerSpendingLimit(store),
+      customerLog: customerLog.slice(0, 10),
+      customerTypes: this._summarizeCustomerTypes(customerLog),
+      employeeCount: store.employees.length,
+      shelfCount: store.shelves.length,
+      storeLevel: store.level || 1,
+      storeExperience: store.experience || 0
     };
   }
 
@@ -619,6 +662,16 @@ class EconomyEngine {
       [array[i], array[j]] = [array[j], array[i]];
     }
     return array;
+  }
+
+  _summarizeCustomerTypes(log) {
+    const counts = {};
+    const moods = {};
+    for (const c of log) {
+      counts[c.type] = (counts[c.type] || 0) + 1;
+      moods[c.mood] = (moods[c.mood] || 0) + 1;
+    }
+    return { types: counts, moods, total: log.length };
   }
 
   async getMarketOverview() {
